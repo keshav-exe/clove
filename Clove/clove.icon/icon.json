@@ -1,0 +1,155 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.86961,0.91276,0.93555,1.00000",
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "hidden" : false,
+      "layers" : [
+        {
+          "glass-specializations" : [
+            {
+              "value" : true
+            },
+            {
+              "appearance" : "dark",
+              "value" : true
+            }
+          ],
+          "hidden" : false,
+          "image-name" : "SVG Image.svg",
+          "name" : "SVG Image",
+          "opacity-specializations" : [
+            {
+              "value" : 1
+            },
+            {
+              "appearance" : "dark",
+              "value" : 0
+            }
+          ]
+        }
+      ],
+      "opacity-specializations" : [
+        {
+          "appearance" : "tinted",
+          "value" : 0
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "hidden" : false,
+      "layers" : [
+        {
+          "hidden" : false,
+          "image-name" : "SVG Image 2.svg",
+          "name" : "SVG Image 2"
+        }
+      ],
+      "opacity-specializations" : [
+        {
+          "value" : 0
+        },
+        {
+          "appearance" : "dark",
+          "value" : 1
+        },
+        {
+          "appearance" : "tinted",
+          "value" : 0
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "blur-material-specializations" : [
+        {
+          "appearance" : "dark",
+          "value" : null
+        },
+        {
+          "appearance" : "tinted",
+          "value" : null
+        }
+      ],
+      "hidden" : false,
+      "layers" : [
+        {
+          "hidden" : false,
+          "image-name" : "SVG Image 3.svg",
+          "name" : "SVG Image 3"
+        }
+      ],
+      "lighting" : "individual",
+      "opacity-specializations" : [
+        {
+          "value" : 0
+        },
+        {
+          "appearance" : "dark",
+          "value" : 0
+        },
+        {
+          "appearance" : "tinted",
+          "value" : 1
+        }
+      ],
+      "shadow-specializations" : [
+        {
+          "appearance" : "tinted",
+          "value" : {
+            "kind" : "neutral",
+            "opacity" : 0.5
+          }
+        }
+      ],
+      "specular" : false,
+      "translucency-specializations" : [
+        {
+          "value" : {
+            "enabled" : true,
+            "value" : 0.5
+          }
+        },
+        {
+          "appearance" : "tinted",
+          "value" : {
+            "enabled" : true,
+            "value" : 0.5
+          }
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

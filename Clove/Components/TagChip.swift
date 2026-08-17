@@ -1,0 +1,32 @@
+import SwiftUI
+
+struct TagChip: View {
+    let title: String
+    var isActive = false
+    var onSelect: () -> Void
+    var onRemove: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Button(title, action: onSelect)
+                .buttonStyle(.plain)
+
+            if let onRemove {
+                Button("Remove \(title)", systemImage: "xmark", action: onRemove)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .imageScale(.small)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .font(.caption)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(
+            isActive ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.07),
+            in: .capsule
+        )
+        .foregroundStyle(isActive ? Color.accentColor : .secondary)
+        .accessibilityElement(children: .combine)
+    }
+}
