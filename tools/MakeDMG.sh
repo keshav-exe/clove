@@ -9,7 +9,7 @@ set -euo pipefail
 #   CONFIG=Release
 #   SIGN_ID="Developer ID Application: Your Name (TEAMID)"
 #   NOTARIZE=1                         submit + staple (needs NOTARY_PROFILE)
-#   NOTARY_PROFILE=AC_PASSWORD         notarytool keychain profile name
+#   NOTARY_PROFILE=AC_PASSWORD         notarytool keychain profile name (NOT the app password)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -23,7 +23,13 @@ DIST="$ROOT/dist"
 STAGE="$ROOT/build/dmg-stage"
 ENTITLEMENTS="$ROOT/Clove/Clove.entitlements"
 
-echo "→ Building $SCHEME ($CONFIG)…"
+if [[ "${NOTARIZE:-0}" == "1" && -z "${SIGN_ID:-}" ]]; then
+  echo "NOTARIZE=1 requires SIGN_ID (Developer ID Application certificate)." >&2
+  echo 'Example: SIGN_ID="Developer ID Application: Name (TEAMID)" NOTARIZE=1 ./tools/MakeDMG.sh' >&2
+  exit 1
+fi
+
+echo "-> Building ${SCHEME} (${CONFIG})..."
 xcodebuild \
   -project "$ROOT/Clove.xcodeproj" \
   -scheme "$SCHEME" \
@@ -44,25 +50,25 @@ DMG_PATH="$DIST/$DMG_NAME"
 mkdir -p "$DIST"
 
 # Strip quarantine / provenance attrs that cause "damaged" Gatekeeper errors.
-echo "→ Clearing extended attributes…"
+echo "-> Clearing extended attributes..."
 xattr -cr "$APP"
 
 if [[ -n "${SIGN_ID:-}" ]]; then
-  echo "→ Signing with $SIGN_ID…"
+  echo "-> Signing with ${SIGN_ID}..."
   codesign --force --options runtime --timestamp \
     --entitlements "$ENTITLEMENTS" \
-    --sign "$SIGN_ID" \
+    --sign "${SIGN_ID}" \
     "$APP"
 else
-  echo "→ Verifying existing signature…"
+  echo "-> Verifying existing signature..."
   codesign --verify --deep --strict --verbose=2 "$APP"
 fi
 
-echo "→ Assessing Gatekeeper acceptance…"
+echo "-> Assessing Gatekeeper acceptance..."
 if spctl -a -vv -t install "$APP" 2>&1 | grep -q "accepted"; then
-  echo "  ✓ App passes spctl"
+  echo "  ok App passes spctl"
 else
-  echo "  ⚠ App is not notarized yet — users will see a Gatekeeper prompt."
+  echo "  warn App is not notarized yet - users will see a Gatekeeper prompt."
   echo "    Set SIGN_ID to Developer ID Application and NOTARIZE=1 before shipping."
 fi
 
@@ -70,7 +76,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE"
 
 if command -v create-dmg >/dev/null 2>&1; then
-  echo "→ Creating styled DMG with create-dmg…"
+  echo "-> Creating styled DMG with create-dmg..."
   rm -f "$DMG_PATH" "${DMG_PATH%.dmg}-temp.dmg"
   VOLICON="$APP/Contents/Resources/AppIcon.icns"
   CREATE_ARGS=(
@@ -88,7 +94,7 @@ if command -v create-dmg >/dev/null 2>&1; then
   fi
   create-dmg "${CREATE_ARGS[@]}" "$DMG_PATH" "$APP"
 else
-  echo "→ create-dmg not found; using basic hdiutil layout"
+  echo "-> create-dmg not found; using basic hdiutil layout"
   echo "  (Install for the polished window: brew install create-dmg)"
   cp -R "$APP" "$STAGE/"
   ln -sf /Applications "$STAGE/Applications"
@@ -96,7 +102,7 @@ else
   rm -f "$RMG" "$DMG_PATH"
   hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -ov -format UDRW -fs HFS+ "$RMG"
   MOUNT="$(hdiutil attach -readwrite -noverify -noautoopen "$RMG" | awk '/\/Volumes\// {print $3; exit}')"
-  echo "→ Mounted at $MOUNT"
+  echo "-> Mounted at ${MOUNT}"
   sleep 1
   osascript <<EOF
 tell application "Finder"
@@ -125,28 +131,28 @@ EOF
 fi
 
 if [[ -n "${SIGN_ID:-}" ]]; then
-  echo "→ Signing DMG…"
-  codesign --force --sign "$SIGN_ID" "$DMG_PATH"
+  echo "-> Signing DMG..."
+  codesign --force --sign "${SIGN_ID}" "$DMG_PATH"
 fi
 
 if [[ "${NOTARIZE:-0}" == "1" ]]; then
   PROFILE="${NOTARY_PROFILE:-AC_PASSWORD}"
-  echo "→ Notarizing (profile: $PROFILE)…"
+  echo "-> Notarizing (profile: ${PROFILE})..."
   xcrun notarytool submit "$DMG_PATH" --keychain-profile "$PROFILE" --wait
-  echo "→ Stapling notarization ticket…"
+  echo "-> Stapling notarization ticket..."
   xcrun stapler staple "$DMG_PATH"
-  echo "→ Final Gatekeeper check…"
-  spctl -a -vv -t open "$DMG_PATH"
+  echo "-> Validating staple..."
+  xcrun stapler validate "$DMG_PATH"
 fi
 
 rm -rf "$STAGE"
 
 echo ""
-echo "✓ $DMG_PATH"
-echo "  version $VERSION ($BUILD)"
+echo "ok ${DMG_PATH}"
+echo "  version ${VERSION} (${BUILD})"
 echo ""
 if [[ "${NOTARIZE:-0}" != "1" ]]; then
   echo "Ship checklist:"
-  echo "  1. SIGN_ID=\"Developer ID Application: …\" NOTARIZE=1 ./tools/MakeDMG.sh"
-  echo "  2. Upload to Lemon Squeezy as the product file"
+  echo '  1. SIGN_ID="Developer ID Application: ..." NOTARIZE=1 ./tools/MakeDMG.sh'
+  echo "  2. Upload DMG and update appcast.json"
 fi

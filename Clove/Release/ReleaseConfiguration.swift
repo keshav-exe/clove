@@ -12,5 +12,5 @@ enum ReleaseConfiguration {
     }
 
     /// JSON manifest: `{ "version": "0.2", "download_url": "https://…/Clove.dmg" }`
-    static let updateManifestURL: URL? = URL(string: "https://clove.app/appcast.json")
+    static let updateManifestURL: URL? = URL(string: "https://kshv.me/clove/appcast.json")
 }
