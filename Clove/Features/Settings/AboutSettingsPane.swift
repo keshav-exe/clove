@@ -3,57 +3,106 @@ import SwiftUI
 
 struct AboutSettingsPane: View {
     @Environment(AppModel.self) private var model
+    @Environment(UpdateService.self) private var updates
+    @State private var whatsNewRelease: WhatsNewRelease?
+    @State private var offeredUpdate: UpdateManifest?
+    @State private var updateNotice: UpdateNotice?
 
     var body: some View {
-        SettingsPaneLayout {
-            VStack(spacing: Metrics.spacingS) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .frame(width: 64, height: 64)
-                    .accessibilityHidden(true)
+        SettingsForm(centered: true) {
+            VStack(alignment: .leading, spacing: 0) {
+                SettingsFieldRow(label: "Version") {
+                    Text(AppVersion.display)
+                }
 
-                Text("Clove")
-                    .font(.title2.weight(.semibold))
+                if ReleaseConfiguration.isAlpha {
+                    SettingsFieldRow(label: "Channel") {
+                        Text(ReleaseConfiguration.channelName)
+                    }
+                }
 
-                Text("Version \(version)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Metrics.spacingM)
+                SettingsFieldRow(label: "Updates") {
+                    if updates.isChecking {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Button("Check for Updates…", action: checkForUpdates)
+                    }
+                }
 
-            SettingsGroup(title: "Library") {
-                SettingsActionRow(
-                    systemImage: "square.stack.3d.up",
-                    tint: .accentColor,
-                    title: "Skills indexed",
-                    detail: "Across every folder Clove is allowed to read."
-                ) {
+                SettingsFieldRow(label: "What's New") {
+                    Button("Show Release Notes…") {
+                        whatsNewRelease = WhatsNewCatalog.latest
+                    }
+                }
+
+                SettingsPaneDivider()
+
+                SettingsFieldRow(label: "Skills indexed") {
                     Text("\(model.skills.count)")
-                        .font(.callout.monospacedDigit())
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
 
-                Divider().padding(.leading, 46)
-
-                SettingsActionRow(
-                    systemImage: "tag",
-                    tint: .teal,
-                    title: "Tags in use",
-                    detail: "Tags from skill frontmatter plus your own."
-                ) {
-                    Text("\(model.allUserFacingTags.count)")
-                        .font(.callout.monospacedDigit())
+                SettingsFieldRow(label: "Groups in use") {
+                    Text("\(model.allGroups.count)")
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
         }
+        .sheet(item: $whatsNewRelease) { release in
+            WhatsNewSheet(release: release) {
+                model.settings.lastSeenWhatsNewVersion = release.version
+            }
+        }
+        .sheet(item: $offeredUpdate, onDismiss: skipUpdateIfStillPending) { update in
+            UpdateAvailableSheet(update: update)
+        }
+        .alert(item: $updateNotice) { notice in
+            switch notice {
+            case .upToDate:
+                Alert(
+                    title: Text("You're up to date"),
+                    message: Text("Clove \(AppVersion.display) is the latest version."),
+                    dismissButton: .default(Text("OK"))
+                )
+            case let .error(message):
+                Alert(
+                    title: Text("Couldn't Check for Updates"),
+                    message: Text(message),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+        }
     }
 
-    private var version: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "\(short) (\(build))"
+    private func checkForUpdates() {
+        Task {
+            await updates.checkForUpdates(userInitiated: true)
+            if let update = updates.availableUpdate {
+                offeredUpdate = update
+            } else if let error = updates.lastCheckError {
+                updateNotice = .error(error)
+            } else {
+                updateNotice = .upToDate
+            }
+        }
+    }
+
+    private func skipUpdateIfStillPending() {
+        guard let update = updates.availableUpdate else { return }
+        updates.dismiss(update)
+    }
+}
+
+private enum UpdateNotice: Identifiable {
+    case upToDate
+    case error(String)
+
+    var id: String {
+        switch self {
+        case .upToDate: "upToDate"
+        case let .error(message): "error-\(message)"
+        }
     }
 }

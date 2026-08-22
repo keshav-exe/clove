@@ -5,87 +5,55 @@ struct LicenseSettingsPane: View {
     @Environment(LicenseService.self) private var license
 
     var body: some View {
-        SettingsPaneLayout {
-            SettingsGroup(title: "License") {
+        SettingsForm(centered: true) {
+            VStack(alignment: .leading, spacing: 0) {
                 if license.isUnlocked, let record = license.record {
-                    SettingsActionRow(
-                        systemImage: "checkmark.seal.fill",
-                        tint: .green,
-                        title: "Activated",
-                        detail: record.customerEmail ?? "Licensed on this Mac."
-                    ) {
+                    SettingsFieldRow(label: "Status") {
                         if license.isValidating {
-                            ProgressView()
-                                .controlSize(.small)
+                            ProgressView().controlSize(.small)
                         } else {
                             Text("Active")
-                                .font(.callout)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    Divider().padding(.leading, 46)
-
-                    SettingsActionRow(
-                        systemImage: "desktopcomputer",
-                        tint: .blue,
-                        title: record.instanceName,
-                        detail: "Uses one of your \(LicenseConfiguration.activationLimit) device activations."
-                    ) {
-                        EmptyView()
-                    }
-
-                    Divider().padding(.leading, 46)
-
-                    SettingsActionRow(
-                        systemImage: "arrow.clockwise",
-                        tint: .orange,
-                        title: "Check license",
-                        detail: "Verify your purchase with Lemon Squeezy."
-                    ) {
-                        Button("Verify") {
-                            Task { await license.bootstrap() }
+                    if let email = record.customerEmail {
+                        SettingsFieldRow(label: "Email") {
+                            Text(email)
                         }
-                        .disabled(license.isValidating)
                     }
 
-                    Divider().padding(.leading, 46)
-
-                    SettingsActionRow(
-                        systemImage: "xmark.circle",
-                        tint: .red,
-                        title: "Deactivate this Mac",
-                        detail: "Free up an activation slot when you move Clove to another computer."
-                    ) {
-                        Button("Deactivate") {
-                            Task { await license.deactivate() }
-                        }
-                        .disabled(license.isValidating)
+                    SettingsFieldRow(label: "Device") {
+                        Text(record.instanceName)
                     }
+
+                    Button("Verify License") {
+                        Task { await license.bootstrap() }
+                    }
+                    .padding(.top, Metrics.spacingS)
+                    .disabled(license.isValidating)
+
+                    Button("Deactivate This Mac", role: .destructive) {
+                        Task { await license.deactivate() }
+                    }
+                    .padding(.top, Metrics.spacingXS)
+                    .disabled(license.isValidating)
                 } else {
-                    SettingsActionRow(
-                        systemImage: "key.fill",
-                        tint: .orange,
-                        title: "Not activated",
-                        detail: "Enter your license key in the main window."
-                    ) {
-                        Button("Activate…") {
-                            WindowBridge.shared.showLibraryWindow()
-                        }
+                    SettingsFieldRow(label: "Status") {
+                        Text("Not activated")
+                            .foregroundStyle(.secondary)
                     }
-                }
-            }
 
-            SettingsGroup(title: "Purchase") {
-                SettingsActionRow(
-                    systemImage: "cart",
-                    tint: .accentColor,
-                    title: "Buy or manage license",
-                    detail: "One-time purchase. Intro $19.99, regular $39.00."
-                ) {
-                    Button("Open Store") {
-                        NSWorkspace.shared.open(LicenseConfiguration.purchaseURL)
+                    Button("Activate in Library…") {
+                        WindowBridge.shared.showLibraryWindow()
                     }
+                    .padding(.top, Metrics.spacingS)
+                }
+
+                SettingsPaneDivider()
+
+                Button("Open Store") {
+                    NSWorkspace.shared.open(LicenseConfiguration.purchaseURL)
                 }
             }
         }
@@ -95,5 +63,4 @@ struct LicenseSettingsPane: View {
 #Preview {
     LicenseSettingsPane()
         .environment(LicenseService.shared)
-        .frame(width: 520, height: 420)
 }

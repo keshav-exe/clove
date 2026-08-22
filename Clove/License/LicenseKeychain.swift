@@ -5,7 +5,7 @@ enum LicenseKeychain {
     private static let service = "com.kshvbgde.clove.license"
 
     static func load() -> LicenseRecord? {
-        var query: [String: Any] = [
+        let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecReturnData as String: true,

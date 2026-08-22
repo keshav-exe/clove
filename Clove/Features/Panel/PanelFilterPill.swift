@@ -14,13 +14,21 @@ struct PanelFilterPill: View {
 
                 Spacer(minLength: Metrics.spacingS)
 
-                Button("Copy all", systemImage: "doc.on.doc", action: model.copyActiveTagGroup)
+                Button("Copy Group", systemImage: "doc.on.doc", action: model.copyActiveTagGroup)
                     .labelStyle(.titleAndIcon)
                     .font(.caption)
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                    .disabled(model.visibleSkills.isEmpty)
+                    .disabled(model.activeTag.map { model.skills(inGroup: $0).isEmpty } ?? true)
                     .help("Copy every skill in this group, separated by spaces")
+
+                Button(model.isGroupPinned(tag) ? "Unpin" : "Pin", systemImage: model.isGroupPinned(tag) ? "pin.fill" : "pin") {
+                    model.togglePinGroup(tag)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(model.isGroupPinned(tag) ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+                .help(model.isGroupPinned(tag) ? "Remove from pinned groups" : "Pin to quick access panel")
             }
         }
         .padding(.horizontal, Metrics.spacingM)

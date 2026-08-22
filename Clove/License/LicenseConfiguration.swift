@@ -1,6 +1,7 @@
 import Foundation
 
 enum LicenseConfiguration {
+    /// Paid builds only. Alpha ships with `ReleaseConfiguration.requiresLicense = false`.
     /// Lemon Squeezy checkout URL for Clove. Update before shipping.
     static let purchaseURL = URL(string: "https://kshv.lemonsqueezy.com/buy/clove")!
 

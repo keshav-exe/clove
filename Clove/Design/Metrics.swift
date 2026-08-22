@@ -17,7 +17,7 @@ enum Metrics {
     static let listIdealWidth: Double = 300
     static let detailMinWidth: Double = 300
 
-    static let settingsWidth: Double = 720
+    static let settingsWidth: Double = 580
     static let settingsHeight: Double = 520
     static let settingsSidebarWidth: Double = 196
 

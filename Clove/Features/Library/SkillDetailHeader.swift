@@ -5,11 +5,9 @@ struct SkillDetailHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Metrics.spacingM) {
-            IconTile(
-                systemImage: skill.source.symbolName,
-                tint: skill.source.tint,
-                size: Metrics.detailIcon
-            )
+            SourceColorBlock(tint: skill.source.tint, size: 14)
+                .frame(width: Metrics.detailIcon, height: Metrics.detailIcon)
+                .background(skill.source.tint.opacity(0.12), in: .rect(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(skill.displayName)

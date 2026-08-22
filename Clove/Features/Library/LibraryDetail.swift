@@ -11,7 +11,7 @@ struct LibraryDetail: View {
                 ContentUnavailableView(
                     "No Skill Selected",
                     systemImage: "sidebar.squares.left",
-                    description: Text("Pick a skill to read its description, tags, and file location.")
+                    description: Text("Pick a skill to read its description, groups, and file location.")
                 )
             }
         }

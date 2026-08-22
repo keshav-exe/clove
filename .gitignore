@@ -10,4 +10,3 @@ build/
 *.dSYM
 .swiftpm/
 .env
-.env.*

@@ -16,11 +16,8 @@ struct PanelSkillRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: Metrics.spacingS) {
-                Image(systemName: SkillSource.listIcon)
-                    .font(.system(size: 11))
-                    .foregroundStyle(isSelected ? Color.accentColor : skill.source.tint)
-                    .frame(width: 14)
-                    .accessibilityHidden(true)
+                SourceColorBlock(tint: isSelected ? Color.accentColor : skill.source.tint)
+                    .frame(width: 14, alignment: .center)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(skill.displayName)
@@ -50,7 +47,8 @@ struct PanelSkillRow: View {
                         onSelect: { model.toggleTagFilter(tag) },
                         onRemove: model.isUserTag(tag, for: skill)
                             ? { model.removeTag(tag, from: skill) }
-                            : nil
+                            : nil,
+                        onCopy: { model.copyGroup(tag) }
                     )
                 }
                 .padding(.leading, 22)

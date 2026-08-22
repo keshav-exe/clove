@@ -4,22 +4,44 @@ struct OnboardingPermissionsStep: View {
     @State private var accessibilityGranted = AccessibilityAccess.isGranted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ForEach(AppPermission.all) { permission in
-                PermissionRow(
-                    permission: permission,
-                    isGranted: permission.isRequired ? accessibilityGranted : nil
-                )
+        VStack(alignment: .leading, spacing: 16) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(AppPermission.all) { permission in
+                        permissionRow(permission)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            Divider()
-                .padding(.top, 2)
+            .scrollIndicators(.never)
+            .scrollBounceBehavior(.basedOnSize)
 
             accessibilityAction
         }
         .onAppear {
             if !accessibilityGranted {
                 AccessibilityAccess.requestPrompt()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func permissionRow(_ permission: AppPermission) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            FeatureHighlightRow(
+                highlight: FeatureHighlight(
+                    symbolName: permission.symbolName,
+                    title: permission.title,
+                    detail: permission.detail
+                )
+            )
+
+            if permission.isRequired {
+                Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(accessibilityGranted ? .green : .orange)
+                    .padding(.top, 4)
+                    .accessibilityLabel(accessibilityGranted ? "Enabled" : "Not enabled yet")
             }
         }
     }
@@ -32,7 +54,7 @@ struct OnboardingPermissionsStep: View {
                 .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
         } else {
-            HStack(spacing: 10) {
+            HStack {
                 Text("Turn on Accessibility to enable insert and drag.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

@@ -13,7 +13,7 @@ enum SkillInserter {
         window?.makeFirstResponder(nil)
 
         if let target = InsertTarget.application {
-            target.activate(options: [.activateIgnoringOtherApps])
+            target.activate(from: NSRunningApplication.current, options: [])
         }
 
         // Wait for the other app to become key before simulating ⌘V.

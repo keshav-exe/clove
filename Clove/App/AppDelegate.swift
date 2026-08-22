@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
+    lazy var updates = UpdateService(settings: model.settings)
 
     private var panel: PanelController?
     private var statusItem: StatusItemController?
@@ -24,6 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applySettings()
         watchSettings()
         InsertTarget.startObserving()
+        updates.applyDeferredInstallIfNeeded()
+
+        // Status items can fail to appear if created before the run loop settles.
+        DispatchQueue.main.async { [weak self] in
+            self?.applyStatusItem()
+        }
+
         NSApp.activate()
     }
 
@@ -59,22 +67,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem = nil
             return
         }
-        guard statusItem == nil else { return }
-
-        let item = StatusItemController()
-        item.onToggle = { [weak self] in
-            self?.togglePanel()
+        if statusItem == nil {
+            let item = StatusItemController()
+            item.onToggle = { [weak self] in
+                self?.togglePanel()
+            }
+            item.onOpenWindow = {
+                WindowBridge.shared.showLibraryWindow()
+            }
+            item.onSettings = {
+                WindowBridge.shared.showSettings()
+            }
+            item.onQuit = {
+                NSApp.terminate(nil)
+            }
+            statusItem = item
         }
-        item.onOpenWindow = {
-            WindowBridge.shared.showLibraryWindow()
-        }
-        item.onSettings = {
-            WindowBridge.shared.showSettings()
-        }
-        item.onQuit = {
-            NSApp.terminate(nil)
-        }
-        statusItem = item
     }
 
     private func applyHotKey() {

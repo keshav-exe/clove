@@ -65,7 +65,9 @@ final class PanelKeyRouter {
                 handleEscape()
                 return true
             case .tab:
-                model.requestFocus(model.activeFocus == .search ? .footer : .search)
+                if !model.pinnedGroups.isEmpty {
+                    model.cyclePinnedGroup()
+                }
                 return true
             case .returnKey, .enter:
                 return handleReturn(command: command, option: option)
@@ -93,6 +95,9 @@ final class PanelKeyRouter {
         case "a" where shift:
             model.selectAllVisible()
             return true
+        case "c" where shift:
+            model.copySelectedSkillGroup()
+            return true
         case "f":
             model.requestFocus(.search)
             return true
@@ -119,10 +124,6 @@ final class PanelKeyRouter {
     /// can grab a second skill, Command types the reference into the app you
     /// came from.
     private func handleReturn(command: Bool, option: Bool) -> Bool {
-        if model.activeFocus == .footer, !command, !option {
-            return false
-        }
-
         guard !model.selectedSkills.isEmpty else { return true }
 
         if command {

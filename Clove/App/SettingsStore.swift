@@ -45,6 +45,34 @@ final class SettingsStore {
         didSet { defaults.set(pinnedPanelFrame, forKey: Keys.pinnedPanelFrame) }
     }
 
+    /// Group names created before any skill was added.
+    var savedGroupNames: [String] {
+        didSet { defaults.set(savedGroupNames, forKey: Keys.savedGroupNames) }
+    }
+
+    /// Groups pinned to the quick access panel for one-click filtering.
+    var pinnedGroups: [String] {
+        didSet { defaults.set(pinnedGroups, forKey: Keys.pinnedGroups) }
+    }
+
+    /// Last app version for which the user saw the What's New sheet.
+    var lastSeenWhatsNewVersion: String? {
+        didSet { defaults.set(lastSeenWhatsNewVersion, forKey: Keys.lastSeenWhatsNewVersion) }
+    }
+
+    /// Update the user dismissed until a newer version ships.
+    var skippedUpdateVersion: String? {
+        didSet { defaults.set(skippedUpdateVersion, forKey: Keys.skippedUpdateVersion) }
+    }
+
+    var pendingUpdateURL: String? {
+        didSet { defaults.set(pendingUpdateURL, forKey: Keys.pendingUpdateURL) }
+    }
+
+    var installUpdateOnLaunch: Bool {
+        didSet { defaults.set(installUpdateOnLaunch, forKey: Keys.installUpdateOnLaunch) }
+    }
+
     /// False when the system refused the shortcut, usually because another app owns it.
     var hotKeyIsRegistered = true
 
@@ -61,6 +89,12 @@ final class SettingsStore {
         customProjectRoots = defaults.stringArray(forKey: Keys.customProjectRoots) ?? []
         hotKeyEnabled = defaults.flag(Keys.hotKeyEnabled, default: true)
         pinnedPanelFrame = defaults.string(forKey: Keys.pinnedPanelFrame)
+        savedGroupNames = defaults.stringArray(forKey: Keys.savedGroupNames) ?? []
+        pinnedGroups = defaults.stringArray(forKey: Keys.pinnedGroups) ?? []
+        lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
+        skippedUpdateVersion = defaults.string(forKey: Keys.skippedUpdateVersion)
+        pendingUpdateURL = defaults.string(forKey: Keys.pendingUpdateURL)
+        installUpdateOnLaunch = defaults.bool(forKey: Keys.installUpdateOnLaunch)
         hotKey = Self.loadHotKey(from: defaults)
     }
 
@@ -115,6 +149,12 @@ final class SettingsStore {
         static let hotKeyEnabled = "hotKeyEnabled"
         static let hotKey = "hotKey"
         static let pinnedPanelFrame = "pinnedPanelFrame"
+        static let savedGroupNames = "savedGroupNames"
+        static let pinnedGroups = "pinnedGroups"
+        static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
+        static let skippedUpdateVersion = "skippedUpdateVersion"
+        static let pendingUpdateURL = "pendingUpdateURL"
+        static let installUpdateOnLaunch = "installUpdateOnLaunch"
     }
 }
 

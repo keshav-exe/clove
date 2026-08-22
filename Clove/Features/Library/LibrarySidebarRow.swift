@@ -6,13 +6,11 @@ struct LibrarySidebarRow: View {
     let tint: Color
 
     var body: some View {
-        Label {
-            Text(filter.title)
-                .lineLimit(1)
-        } icon: {
-            IconTile(systemImage: filter.symbolName, tint: tint, size: 17)
-        }
-        .badge(model.count(of: filter))
-        .tag(filter)
+        Label(filter.title, systemImage: filter.symbolName)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .badge(model.count(of: filter))
+            .tag(filter)
     }
 }

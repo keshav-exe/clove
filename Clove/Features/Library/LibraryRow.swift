@@ -5,10 +5,7 @@ struct LibraryRow: View {
     let skill: Skill
 
     var body: some View {
-        HStack(alignment: .top, spacing: Metrics.spacingS) {
-            IconTile(systemImage: SkillSource.listIcon, tint: skill.source.tint, size: 18)
-                .padding(.top, 1)
-
+        Label {
             VStack(alignment: .leading, spacing: 2) {
                 Text(skill.displayName)
                     .font(.body.weight(.medium))
@@ -19,7 +16,11 @@ struct LibraryRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
+        } icon: {
+            SourceColorBlock(tint: skill.source.tint, size: 10)
+                .frame(width: 20, height: 20)
         }
+        .labelStyle(.titleAndIcon)
         .padding(.vertical, 3)
         .skillDraggable(skill)
         .contextMenu {

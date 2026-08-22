@@ -6,23 +6,31 @@ struct OnboardingShortcutStep: View {
     var body: some View {
         @Bindable var settings = model.settings
 
-        VStack(alignment: .leading, spacing: 18) {
-            OnboardingRow(
-                systemImage: "command",
-                title: "Global shortcut",
-                detail: "Opens the quick access panel from any app."
-            ) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                FeatureHighlightRow(
+                    highlight: FeatureHighlight(
+                        symbolName: "command",
+                        title: "Global shortcut",
+                        detail: "Opens the quick access panel from any app."
+                    )
+                )
+
                 Toggle("Global shortcut", isOn: $settings.hotKeyEnabled)
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                    .padding(.top, 4)
             }
 
-            HStack(spacing: 14) {
-                OnboardingTile(systemImage: "keyboard")
+            HStack(spacing: 12) {
+                Image(systemName: "keyboard")
+                    .font(.system(size: 20))
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(width: 28, height: 28)
 
                 Text("Shortcut")
-                    .font(.callout.weight(.semibold))
+                    .font(.body.weight(.medium))
 
                 Spacer(minLength: 8)
 
@@ -30,6 +38,7 @@ struct OnboardingShortcutStep: View {
             }
             .disabled(!settings.hotKeyEnabled)
             .opacity(settings.hotKeyEnabled ? 1 : 0.5)
+            .padding(.leading, 2)
 
             if settings.hotKeyEnabled, settings.hotKey != nil, !settings.hotKeyIsRegistered {
                 Label(
@@ -43,15 +52,20 @@ struct OnboardingShortcutStep: View {
 
             Divider()
 
-            OnboardingRow(
-                systemImage: "menubar.arrow.up.rectangle",
-                title: "Menu bar icon",
-                detail: "Keeps Clove one click away, even when the window is closed."
-            ) {
+            HStack(alignment: .top) {
+                FeatureHighlightRow(
+                    highlight: FeatureHighlight(
+                        symbolName: "menubar.arrow.up.rectangle",
+                        title: "Menu bar icon",
+                        detail: "Keeps Clove one click away, even when the window is closed."
+                    )
+                )
+
                 Toggle("Menu bar icon", isOn: $settings.showMenuBarIcon)
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                    .padding(.top, 4)
             }
 
             Text("You can change all of this later in Settings.")

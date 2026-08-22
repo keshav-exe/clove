@@ -5,6 +5,7 @@ struct TagChip: View {
     var isActive = false
     var onSelect: () -> Void
     var onRemove: (() -> Void)?
+    var onCopy: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 3) {
@@ -28,5 +29,17 @@ struct TagChip: View {
         )
         .foregroundStyle(isActive ? Color.accentColor : .secondary)
         .accessibilityElement(children: .combine)
+        .contextMenu {
+            if let onCopy {
+                Button("Copy Group", systemImage: "doc.on.doc", action: onCopy)
+            }
+            Button("Filter by \(title)", systemImage: "line.3.horizontal.decrease") {
+                onSelect()
+            }
+            if let onRemove {
+                Divider()
+                Button("Remove from Group", systemImage: "xmark", action: onRemove)
+            }
+        }
     }
 }

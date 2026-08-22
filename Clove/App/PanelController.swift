@@ -10,6 +10,10 @@ final class PanelController {
     private var observers: [any NSObjectProtocol] = []
     private var outsideClickMonitor: Any?
     private var keyRouter: PanelKeyRouter?
+    /// The status-item click that opens the panel can also hit the global
+    /// outside-click monitor; ignore dismissals briefly after showing.
+    private var suppressOutsideDismissUntil: Date?
+    private weak var anchorStatusButton: NSView?
 
     init(model: AppModel) {
         self.model = model
@@ -68,6 +72,7 @@ final class PanelController {
     func show(relativeTo statusButton: NSView? = nil) {
         InsertTarget.captureCurrent()
         model.prepareForDisplay()
+        anchorStatusButton = statusButton
         position(relativeTo: statusButton)
 
         // `orderFrontRegardless` first: a status item click does not always grant
@@ -76,6 +81,7 @@ final class PanelController {
 
         if !isPinned {
             NSApp.activate()
+            suppressOutsideDismissUntil = Date().addingTimeInterval(0.25)
             installOutsideClickMonitor()
         }
 
@@ -94,9 +100,17 @@ final class PanelController {
         guard outsideClickMonitor == nil else { return }
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
-        ) { [weak self] _ in
+        ) { [weak self] event in
             MainActor.assumeIsolated {
-                self?.hide()
+                guard let self else { return }
+                if let until = self.suppressOutsideDismissUntil, Date() < until {
+                    return
+                }
+                // Clicks on the status item arrive as global events too.
+                if self.isClickOnOwnStatusItem(event) {
+                    return
+                }
+                self.hide()
             }
         }
     }
@@ -154,6 +168,14 @@ final class PanelController {
             }
             observers.append(token)
         }
+    }
+
+    private func isClickOnOwnStatusItem(_ event: NSEvent) -> Bool {
+        guard event.window == nil, let button = anchorStatusButton, let window = button.window else {
+            return false
+        }
+        let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
+        return frame.insetBy(dx: -4, dy: -4).contains(NSEvent.mouseLocation)
     }
 
     private func clampToScreen(_ origin: CGPoint, size: CGSize, screen: NSScreen?) -> CGPoint {

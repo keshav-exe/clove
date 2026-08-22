@@ -2,37 +2,32 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(UpdateService.self) private var updates
     @State private var pane: SettingsPane = .general
 
     var body: some View {
-        HStack(spacing: 0) {
-            List(selection: $pane) {
-                Section {
-                    ForEach(SettingsPane.allCases) { item in
-                        Label {
-                            Text(item.title)
-                        } icon: {
-                            SettingsSidebarIcon(systemImage: item.symbolName, tint: item.tint)
-                        }
-                        .tag(item)
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
-            .frame(width: Metrics.settingsSidebarWidth)
+        VStack(spacing: 0) {
+            SettingsTabBar(selection: $pane)
 
             Divider()
 
-            detail
+            Text(pane.title)
+                .font(.title3.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.top, Metrics.spacingM)
+                .padding(.bottom, Metrics.spacingS)
+                .accessibilityAddTraits(.isHeader)
+
+            paneView(pane)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(nsColor: .windowBackgroundColor))
+                .id(pane)
         }
         .frame(width: Metrics.settingsWidth, height: Metrics.settingsHeight)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     @ViewBuilder
-    private var detail: some View {
+    private func paneView(_ pane: SettingsPane) -> some View {
         switch pane {
         case .general: GeneralSettingsPane()
         case .sources: SourcesSettingsPane()
@@ -47,4 +42,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environment(AppModel.preview)
+        .environment(UpdateService(settings: AppModel.preview.settings))
 }

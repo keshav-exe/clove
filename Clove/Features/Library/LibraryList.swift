@@ -19,7 +19,7 @@ struct LibraryList: View {
             max: 420
         )
         .navigationTitle(model.libraryFilter.title)
-        .searchable(text: $model.libraryQuery, prompt: "Search name, description, tags")
+        .searchable(text: $model.libraryQuery, prompt: "Search name, description, groups")
         .overlay {
             if model.isScanning && model.skills.isEmpty {
                 ProgressView("Looking for skills")
@@ -34,6 +34,31 @@ struct LibraryList: View {
                 Button("Refresh", systemImage: "arrow.clockwise", action: refresh)
                     .disabled(model.isScanning)
                     .help("Rescan your skill folders")
+            }
+
+            if case .tag(let group) = model.libraryFilter {
+                ToolbarItem {
+                    Menu {
+                        ForEach(unassignedSkills(for: group)) { skill in
+                            Button(skill.displayName) {
+                                model.addSkillToGroup(skill, group: group)
+                            }
+                        }
+                        if unassignedSkills(for: group).isEmpty {
+                            Text("Every skill is already in this group")
+                        }
+                    } label: {
+                        Label("Add Skills", systemImage: "plus")
+                    }
+                    .help("Add skills to \(group)")
+                }
+
+                ToolbarItem {
+                    Button("Copy Group", systemImage: "doc.on.doc") {
+                        model.copyGroup(group)
+                    }
+                    .help("Copy all skill references in this group")
+                }
             }
         }
         .background {
@@ -50,5 +75,11 @@ struct LibraryList: View {
 
     private func refresh() {
         Task { await model.refresh() }
+    }
+
+    private func unassignedSkills(for group: String) -> [Skill] {
+        model.skills.filter { skill in
+            !model.tags(for: skill).contains { $0.localizedStandardCompare(group) == .orderedSame }
+        }
     }
 }

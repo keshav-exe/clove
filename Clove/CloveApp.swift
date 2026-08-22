@@ -9,11 +9,10 @@ struct CloveApp: App {
         Window("Clove", id: CloveWindowID.library) {
             LibraryRootView()
                 .environment(appDelegate.model)
+                .environment(appDelegate.updates)
                 .environment(license)
                 .task {
-                    #if !DEBUG
                     await license.bootstrap()
-                    #endif
                 }
         }
         .defaultSize(width: 980, height: 640)
@@ -24,9 +23,9 @@ struct CloveApp: App {
         Settings {
             SettingsView()
                 .environment(appDelegate.model)
+                .environment(appDelegate.updates)
                 .environment(license)
         }
-        .defaultSize(width: Metrics.settingsWidth, height: Metrics.settingsHeight)
     }
 }
 

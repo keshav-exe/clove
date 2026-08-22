@@ -6,33 +6,50 @@ struct SkillTagEditor: View {
 
     @State private var draft = ""
 
-    private var tags: [String] {
+    private var groups: [String] {
         model.tags(for: skill)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.spacingS) {
-            if tags.isEmpty {
-                Text("No tags yet. Tags are stored locally and make search faster.")
+            if groups.isEmpty {
+                Text("No groups yet. Groups are stored locally and make search faster.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                WrappingTagRow(tags: tags) { tag in
+                WrappingTagRow(tags: groups) { group in
                     TagChip(
-                        title: tag,
-                        isActive: model.libraryFilter == .tag(tag),
-                        onSelect: { model.libraryFilter = .tag(tag) },
-                        onRemove: model.isUserTag(tag, for: skill)
-                            ? { model.removeTag(tag, from: skill) }
+                        title: group,
+                        isActive: model.libraryFilter == .tag(group),
+                        onSelect: { model.libraryFilter = .tag(group) },
+                        onRemove: model.isUserTag(group, for: skill)
+                            ? { model.removeTag(group, from: skill) }
                             : nil
                     )
                 }
             }
 
             HStack(spacing: Metrics.spacingS) {
-                TextField("Add a tag", text: $draft)
+                TextField("Add to group", text: $draft)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(commit)
+
+                Menu {
+                    ForEach(model.allGroups, id: \.self) { group in
+                        if !groups.contains(where: { $0.localizedStandardCompare(group) == .orderedSame }) {
+                            Button(group) {
+                                model.addSkillToGroup(skill, group: group)
+                            }
+                        }
+                    }
+                    if model.allGroups.isEmpty {
+                        Text("No groups yet")
+                    }
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+                .menuStyle(.borderlessButton)
+                .help("Add to an existing group")
 
                 Button("Add", action: commit)
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

@@ -2,8 +2,11 @@ import SwiftUI
 
 struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(UpdateService.self) private var updates
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingOnboarding = false
+    @State private var whatsNewRelease: WhatsNewRelease?
+    @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
         NavigationSplitView {
@@ -18,18 +21,38 @@ struct LibraryRootView: View {
         .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
         .task {
             await model.startIfNeeded()
+            await updates.checkForUpdates()
+            presentInitialSheets()
         }
         .onAppear {
             WindowBridge.shared.openLibraryWindow = {
                 openWindow(id: CloveWindowID.library)
             }
-            isShowingOnboarding = !model.settings.hasCompletedOnboarding
+        }
+        .onChange(of: updates.availableUpdate) {
+            if offeredUpdate == nil {
+                offeredUpdate = updates.availableUpdate
+            }
         }
         .sheet(isPresented: $isShowingOnboarding) {
             OnboardingFlow()
                 .environment(model)
                 .interactiveDismissDisabled()
         }
+        .sheet(item: $whatsNewRelease) { release in
+            WhatsNewSheet(release: release) {
+                model.settings.lastSeenWhatsNewVersion = release.version
+            }
+        }
+        .sheet(item: $offeredUpdate, onDismiss: skipUpdateIfStillPending) { update in
+            UpdateAvailableSheet(update: update)
+                .environment(updates)
+        }
+    }
+
+    private func skipUpdateIfStillPending() {
+        guard let update = updates.availableUpdate else { return }
+        updates.dismiss(update)
     }
 
     private var subtitle: String {
@@ -41,9 +64,24 @@ struct LibraryRootView: View {
         let count = model.skills.count
         return count == 1 ? "1 skill on this Mac" : "\(count) skills on this Mac"
     }
+
+    private func presentInitialSheets() {
+        if !model.settings.hasCompletedOnboarding {
+            isShowingOnboarding = true
+            return
+        }
+        if let update = updates.availableUpdate {
+            offeredUpdate = update
+            return
+        }
+        whatsNewRelease = WhatsNewCatalog.unseenRelease(
+            lastSeenVersion: model.settings.lastSeenWhatsNewVersion
+        )
+    }
 }
 
 #Preview {
     LibraryRootView()
         .environment(AppModel.preview)
+        .environment(UpdateService(settings: AppModel.preview.settings))
 }

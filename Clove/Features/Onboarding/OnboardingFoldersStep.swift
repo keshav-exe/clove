@@ -8,12 +8,12 @@ struct OnboardingFoldersStep: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(Array(roots.enumerated()), id: \.element.id) { index, root in
                         if index > 0 {
-                            Divider().padding(.leading, 44)
+                            Divider()
                         }
 
                         OnboardingScanLocationRow(
@@ -25,12 +25,8 @@ struct OnboardingFoldersStep: View {
             }
             .scrollIndicators(.never)
             .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: 262)
-            .background(.fill.quinary, in: .rect(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(.separator.opacity(0.4), lineWidth: 1)
-            }
+            .frame(maxHeight: 240)
+            .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 8, style: .continuous))
 
             HStack(spacing: 10) {
                 Button("Add Project Folder…", systemImage: "plus", action: addFolder)

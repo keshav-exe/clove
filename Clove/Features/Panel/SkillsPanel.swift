@@ -14,6 +14,16 @@ struct SkillsPanel: View {
 
             if model.activeTag != nil {
                 PanelFilterPill()
+
+                Divider()
+                    .opacity(0.6)
+            }
+
+            PanelPinnedGroups()
+
+            if model.activeTag != nil || !model.pinnedGroups.isEmpty {
+                Divider()
+                    .opacity(0.6)
             }
 
             PanelSkillList()
@@ -22,7 +32,7 @@ struct SkillsPanel: View {
             Divider()
                 .opacity(0.6)
 
-            PanelFooter(focus: $focus)
+            PanelFooter()
         }
         .frame(
             minWidth: Metrics.panelMinWidth,

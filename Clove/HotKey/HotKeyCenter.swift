@@ -20,7 +20,7 @@ final class HotKeyCenter: @unchecked Sendable {
         installHandlerIfNeeded()
 
         var ref: EventHotKeyRef?
-        var hotKeyID = EventHotKeyID(signature: 0x434C5645, id: 1)
+        let hotKeyID = EventHotKeyID(signature: 0x434C5645, id: 1)
         let status = RegisterEventHotKey(
             chord.keyCode,
             chord.modifiers.carbonFlags,

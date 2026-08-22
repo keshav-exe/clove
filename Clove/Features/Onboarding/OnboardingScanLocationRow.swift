@@ -10,7 +10,7 @@ struct OnboardingScanLocationRow: View {
         HStack(spacing: 12) {
             Image(systemName: root.isCustom ? "folder.badge.plus" : "folder.fill")
                 .font(.system(size: 13))
-                .foregroundStyle(root.exists ? OnboardingStyle.brandDeep : Color.secondary)
+                .foregroundStyle(root.exists ? Color.accentColor : Color.secondary)
                 .frame(width: 18)
 
             Text(root.title)

@@ -18,7 +18,7 @@ struct SkillDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section("Tags") {
+            Section("Groups") {
                 SkillTagEditor(skill: skill)
             }
 
@@ -41,13 +41,6 @@ struct SkillDetailView: View {
                 }
             } header: {
                 Text("File")
-            } footer: {
-                Label(
-                    "Clove reads this file and nothing else. It never edits, copies, or uploads it.",
-                    systemImage: "lock.shield"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

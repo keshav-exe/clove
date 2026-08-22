@@ -7,26 +7,22 @@ struct OnboardingFlow: View {
     @State private var step: OnboardingStep = .welcome
 
     var body: some View {
-        VStack(spacing: 0) {
-            OnboardingHero(step: step)
-
-            VStack(spacing: 0) {
-                OnboardingHeader(step: step)
-                    .padding(.top, 26)
-                    .padding(.bottom, 22)
-
-                stepContent
-                    .frame(maxWidth: step.contentWidth, alignment: .leading)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            }
-            .id(step)
-            .transition(stepTransition)
-            .padding(.horizontal, OnboardingStyle.horizontalPadding)
-
-            OnboardingFooter(step: step, onBack: goBack, onContinue: goForward)
+        FeatureSheet(
+            useAppIcon: step == .welcome,
+            symbolName: step == .welcome ? nil : step.symbolName,
+            title: step.title,
+            subtitle: step.subtitle,
+            pageIndex: step.rawValue,
+            pageCount: OnboardingStep.allCases.count,
+            continueTitle: step.continueTitle,
+            showsBack: step.previous != nil,
+            onBack: goBack,
+            onContinue: goForward
+        ) {
+            stepContent
+                .id(step)
+                .transition(stepTransition)
         }
-        .frame(width: OnboardingStyle.width, height: OnboardingStyle.height)
-        .background(Color(nsColor: .windowBackgroundColor))
         .animation(Motion.selection(reduceMotion), value: step)
     }
 
@@ -34,7 +30,7 @@ struct OnboardingFlow: View {
         reduceMotion
             ? .opacity
             : .asymmetric(
-                insertion: .opacity.combined(with: .offset(y: 8)),
+                insertion: .opacity.combined(with: .offset(y: 6)),
                 removal: .opacity
             )
     }
@@ -46,6 +42,7 @@ struct OnboardingFlow: View {
         case .privacy: OnboardingPrivacyStep()
         case .permissions: OnboardingPermissionsStep()
         case .folders: OnboardingFoldersStep()
+        case .features: OnboardingFeaturesStep()
         case .shortcut: OnboardingShortcutStep()
         }
     }
@@ -60,6 +57,7 @@ struct OnboardingFlow: View {
             step = next
         } else {
             model.settings.hasCompletedOnboarding = true
+            model.settings.lastSeenWhatsNewVersion = AppVersion.short
             dismiss()
             Task { await model.refresh() }
         }

@@ -12,12 +12,9 @@ final class LicenseService {
     private(set) var lastError: String?
 
     var isUnlocked: Bool {
-        #if DEBUG
-        return true
-        #else
+        guard ReleaseConfiguration.requiresLicense else { return true }
         if case .unlocked = status { return true }
         return false
-        #endif
     }
 
     private init() {
@@ -26,6 +23,7 @@ final class LicenseService {
     }
 
     func bootstrap() async {
+        guard ReleaseConfiguration.requiresLicense else { return }
         refreshStatus()
         guard isUnlocked, let record else { return }
         await validateStoredLicense(record)

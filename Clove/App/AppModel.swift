@@ -98,7 +98,11 @@ final class AppModel {
     }
 
     var allUserFacingTags: [String] {
-        var collected: [String] = []
+        allGroups
+    }
+
+    var allGroups: [String] {
+        var collected = settings.savedGroupNames
         for skill in skills {
             for tag in tags(for: skill) {
                 if !collected.contains(where: { $0.localizedStandardCompare(tag) == .orderedSame }) {
@@ -107,6 +111,12 @@ final class AppModel {
             }
         }
         return collected.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    var pinnedGroups: [String] {
+        settings.pinnedGroups.filter { name in
+            allGroups.contains { $0.localizedStandardCompare(name) == .orderedSame }
+        }
     }
 
     var tagsFileURL: URL {
@@ -264,10 +274,31 @@ final class AppModel {
     }
 
     func copyActiveTagGroup() {
-        guard activeTag != nil else { return }
-        let references = visibleSkills.map(\.reference)
+        guard let activeTag else { return }
+        copyGroup(activeTag)
+    }
+
+    func copySelectedSkillGroup() {
+        if let activeTag {
+            copyGroup(activeTag)
+            return
+        }
+        guard let skill = selectedSkill else { return }
+        let groups = tags(for: skill)
+        guard let first = groups.first else { return }
+        copyGroup(first)
+    }
+
+    func copyGroup(_ name: String) {
+        let references = skills(inGroup: name).map(\.reference)
         guard !references.isEmpty else { return }
         copy(references.joined(separator: " "))
+    }
+
+    func skills(inGroup name: String) -> [Skill] {
+        skills.filter { skill in
+            tags(for: skill).contains { $0.localizedStandardCompare(name) == .orderedSame }
+        }
     }
 
     func copyReferences(for skills: [Skill]) {
@@ -312,7 +343,7 @@ final class AppModel {
         copy(skill.displayName)
     }
 
-    // MARK: - Tags
+    // MARK: - Groups
 
     func toggleTagFilter(_ tag: String) {
         if let activeTag, activeTag.localizedStandardCompare(tag) == .orderedSame {
@@ -324,6 +355,107 @@ final class AppModel {
 
     func clearTagFilter() {
         activeTag = nil
+    }
+
+    func createGroup(named raw: String) {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        guard !allGroups.contains(where: { $0.localizedStandardCompare(name) == .orderedSame }) else { return }
+        settings.savedGroupNames.append(name)
+    }
+
+    func deleteGroup(_ name: String) {
+        settings.savedGroupNames.removeAll { $0.localizedStandardCompare(name) == .orderedSame }
+        for skill in skills where isUserTag(name, for: skill) {
+            removeTag(name, from: skill)
+        }
+        for skill in skills where skill.frontmatterTags.contains(where: { $0.localizedStandardCompare(name) == .orderedSame }) {
+            // Frontmatter groups can't be removed, but drop the saved name entry.
+            break
+        }
+        unpinGroup(name)
+        dropFilters(forRemoved: name)
+    }
+
+    func renameGroup(from oldName: String, to raw: String) {
+        let newName = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty else { return }
+        guard newName.localizedStandardCompare(oldName) != .orderedSame else { return }
+        guard !allGroups.contains(where: { $0.localizedStandardCompare(newName) == .orderedSame }) else { return }
+
+        if let index = settings.savedGroupNames.firstIndex(where: { $0.localizedStandardCompare(oldName) == .orderedSame }) {
+            settings.savedGroupNames[index] = newName
+        } else {
+            settings.savedGroupNames.append(newName)
+        }
+
+        for skill in skills where isUserTag(oldName, for: skill) {
+            removeTag(oldName, from: skill)
+            addTag(newName, to: skill)
+        }
+
+        if let activeTag, activeTag.localizedStandardCompare(oldName) == .orderedSame {
+            self.activeTag = newName
+        }
+        if case .tag(let filtered) = libraryFilter, filtered.localizedStandardCompare(oldName) == .orderedSame {
+            libraryFilter = .tag(newName)
+        }
+        if let index = settings.pinnedGroups.firstIndex(where: { $0.localizedStandardCompare(oldName) == .orderedSame }) {
+            settings.pinnedGroups[index] = newName
+        }
+    }
+
+    func isGroupPinned(_ name: String) -> Bool {
+        settings.pinnedGroups.contains { $0.localizedStandardCompare(name) == .orderedSame }
+    }
+
+    func togglePinGroup(_ name: String) {
+        if isGroupPinned(name) {
+            unpinGroup(name)
+        } else {
+            settings.pinnedGroups.append(name)
+        }
+    }
+
+    func unpinGroup(_ name: String) {
+        settings.pinnedGroups.removeAll { $0.localizedStandardCompare(name) == .orderedSame }
+    }
+
+    func cyclePinnedGroup() {
+        let groups = pinnedGroups
+        guard !groups.isEmpty else { return }
+
+        if let activeTag,
+           let index = groups.firstIndex(where: { $0.localizedStandardCompare(activeTag) == .orderedSame }) {
+            let next = groups[(index + 1) % groups.count]
+            self.activeTag = next
+        } else {
+            activeTag = groups[0]
+        }
+    }
+
+    func addSkillToGroup(_ skill: Skill, group name: String) {
+        addTag(name, to: skill)
+        ensureGroupExists(name)
+    }
+
+    func addSelectedSkillsToGroup(_ name: String) {
+        for skill in selectedSkills {
+            addTag(name, to: skill)
+        }
+        ensureGroupExists(name)
+    }
+
+    func addLibrarySelectionToGroup(_ name: String) {
+        guard let skill = librarySelectedSkill else { return }
+        addSkillToGroup(skill, group: name)
+    }
+
+    private func ensureGroupExists(_ name: String) {
+        guard !settings.savedGroupNames.contains(where: { $0.localizedStandardCompare(name) == .orderedSame }) else {
+            return
+        }
+        settings.savedGroupNames.append(name)
     }
 
     func addFooterTag() {
@@ -342,6 +474,7 @@ final class AppModel {
         tags.append(tag)
         userTags[skill.id] = tags
         persistence.save(userTags)
+        ensureGroupExists(tag)
     }
 
     func removeTag(_ tag: String, from skill: Skill) {
@@ -355,6 +488,8 @@ final class AppModel {
     func resetLocalTags() {
         userTags = [:]
         persistence.save(userTags)
+        settings.savedGroupNames = []
+        settings.pinnedGroups = []
         activeTag = nil
         libraryFilter = .all
     }
