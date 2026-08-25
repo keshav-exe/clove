@@ -16,8 +16,7 @@ final class WindowBridge {
     private init() {}
 
     func showLibraryWindow() {
-        NSApp.activate()
-        openLibraryWindow?()
+        LibraryWindowTracker.shared.showLibraryWindow()
     }
 
     func showSettings() {

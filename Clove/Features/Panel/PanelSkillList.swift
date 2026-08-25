@@ -23,11 +23,11 @@ struct PanelSkillList: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
                     ForEach(model.sections) { section in
-                        PanelSectionHeader(title: section.title, count: section.skills.count)
+                        PanelSectionHeader(title: section.title, count: section.entries.count)
 
-                        ForEach(section.skills) { skill in
-                            PanelSkillRow(skill: skill)
-                                .id(skill.id)
+                        ForEach(section.entries) { entry in
+                            PanelSkillRow(entry: entry)
+                                .id(entry.primary.id)
                         }
                     }
                 }

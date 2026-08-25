@@ -30,44 +30,48 @@ struct SkillSearchTests {
         ),
     ]
 
+    private var catalog: [CatalogEntry] {
+        SkillCatalog.build(from: skills)
+    }
+
     @Test func ranksNameMatchesAboveDescription() {
         let results = SkillSearch.results(
-            skills: skills,
+            catalog: catalog,
             query: "swiftui",
             userTags: [:],
             activeTag: nil
         )
-        #expect(results.first?.name == "swiftui-pro")
+        #expect(results.first?.displayName == "swiftui-pro")
     }
 
     @Test func matchesUserTags() {
         let results = SkillSearch.results(
-            skills: skills,
+            catalog: catalog,
             query: "authoring",
             userTags: ["/tmp/create-skill/SKILL.md": ["authoring"]],
             activeTag: nil
         )
-        #expect(results.map(\.name) == ["create-skill"])
+        #expect(results.map(\.displayName) == ["create-skill"])
     }
 
     @Test func filtersByActiveTag() {
         let results = SkillSearch.results(
-            skills: skills,
+            catalog: catalog,
             query: "",
             userTags: [:],
             activeTag: "next"
         )
-        #expect(results.map(\.name) == ["nextjs"])
+        #expect(results.map(\.displayName) == ["nextjs"])
     }
 
     @Test func requiresEveryToken() {
         let results = SkillSearch.results(
-            skills: skills,
+            catalog: catalog,
             query: "swift review",
             userTags: [:],
             activeTag: nil
         )
-        #expect(results.map(\.name) == ["swiftui-pro"])
+        #expect(results.map(\.displayName) == ["swiftui-pro"])
     }
 
     @Test func fuzzyMatchesName() {

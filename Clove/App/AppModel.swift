@@ -25,7 +25,7 @@ final class AppModel {
     /// over the same search field.
     var libraryQuery = ""
     var libraryFilter: LibraryFilter = .all
-    var librarySelection: Skill.ID?
+    var librarySelection: CatalogEntry.ID?
 
     let settings: SettingsStore
     private let scanner: SkillScanner
@@ -44,19 +44,23 @@ final class AppModel {
 
     // MARK: - Derived data
 
+    var catalog: [CatalogEntry] {
+        SkillCatalog.build(from: skills)
+    }
+
     /// Flattened section order, so arrow keys walk the rows in the order they
     /// are drawn rather than in raw search-rank order.
     var visibleSkills: [Skill] {
-        sections.flatMap(\.skills)
+        rankedCatalog.map(\.primary)
     }
 
     var sections: [SkillSection] {
-        SkillSearch.sections(from: rankedSkills)
+        SkillSearch.sections(from: rankedCatalog)
     }
 
-    private var rankedSkills: [Skill] {
+    private var rankedCatalog: [CatalogEntry] {
         SkillSearch.results(
-            skills: skills,
+            catalog: catalog,
             query: query,
             userTags: userTags,
             activeTag: activeTag
@@ -71,17 +75,22 @@ final class AppModel {
         selectedSkills.last ?? selectedSkills.first
     }
 
-    var libraryResults: [Skill] {
+    var libraryResults: [CatalogEntry] {
         SkillSearch.library(
-            skills: skills,
+            catalog: catalog,
             query: libraryQuery,
             userTags: userTags,
             filter: libraryFilter
         )
     }
 
+    var librarySelectedEntry: CatalogEntry? {
+        guard let librarySelection else { return nil }
+        return catalog.first { $0.id == librarySelection }
+    }
+
     var librarySelectedSkill: Skill? {
-        skills.first { $0.id == librarySelection }
+        librarySelectedEntry?.primary
     }
 
     var sidebarSelection: LibraryFilter? {
@@ -103,8 +112,8 @@ final class AppModel {
 
     var allGroups: [String] {
         var collected = settings.savedGroupNames
-        for skill in skills {
-            for tag in tags(for: skill) {
+        for entry in catalog {
+            for tag in tags(for: entry) {
                 if !collected.contains(where: { $0.localizedStandardCompare(tag) == .orderedSame }) {
                     collected.append(tag)
                 }
@@ -124,11 +133,24 @@ final class AppModel {
     }
 
     func count(of filter: LibraryFilter) -> Int {
-        SkillSearch.count(of: filter, in: skills, userTags: userTags)
+        SkillSearch.count(of: filter, in: catalog, userTags: userTags)
+    }
+
+    func tags(for entry: CatalogEntry) -> [String] {
+        SkillSearch.mergedTags(for: entry, userTags: userTags)
     }
 
     func tags(for skill: Skill) -> [String] {
-        SkillSearch.mergedTags(for: skill, userTags: userTags)
+        if let entry = SkillCatalog.entry(for: skill, in: catalog) {
+            return tags(for: entry)
+        }
+        return SkillSearch.mergedTags(for: skill, userTags: userTags)
+    }
+
+    func isUserTag(_ tag: String, for entry: CatalogEntry) -> Bool {
+        entry.copies.contains { skill in
+            (userTags[skill.id] ?? []).contains { $0.localizedStandardCompare(tag) == .orderedSame }
+        }
     }
 
     func isUserTag(_ tag: String, for skill: Skill) -> Bool {
@@ -154,16 +176,7 @@ final class AppModel {
         defer { isScanning = false }
         skills = await scanner.scan(configuration: settings.scanConfiguration)
         didScan = true
-        selectedIDs = selectedIDs.filter { id in skills.contains { $0.id == id } }
-        if let selectionAnchorID, !skills.contains(where: { $0.id == selectionAnchorID }) {
-            self.selectionAnchorID = nil
-        }
-        if let librarySelection, !skills.contains(where: { $0.id == librarySelection }) {
-            self.librarySelection = nil
-        }
-        if case .source(let source) = libraryFilter, !availableSources.contains(source) {
-            libraryFilter = .all
-        }
+        remapSelectionsAfterScan()
     }
 
     func prepareForDisplay() {
@@ -296,8 +309,38 @@ final class AppModel {
     }
 
     func skills(inGroup name: String) -> [Skill] {
-        skills.filter { skill in
-            tags(for: skill).contains { $0.localizedStandardCompare(name) == .orderedSame }
+        catalog.filter { entry in
+            tags(for: entry).contains { $0.localizedStandardCompare(name) == .orderedSame }
+        }
+        .map(\.primary)
+    }
+
+    private func remapSelectionsAfterScan() {
+        let built = catalog
+
+        func catalogID(for skillID: String) -> String? {
+            built.first { $0.copies.contains { $0.id == skillID } }?.id
+        }
+
+        func primaryID(for skillID: String) -> String? {
+            built.first { $0.copies.contains { $0.id == skillID } }?.primary.id
+        }
+
+        selectedIDs = Set(selectedIDs.compactMap { primaryID(for: $0) })
+
+        if let selectionAnchorID {
+            self.selectionAnchorID = primaryID(for: selectionAnchorID)
+        }
+
+        if let librarySelection {
+            self.librarySelection = catalogID(for: librarySelection) ?? librarySelection
+            if built.contains(where: { $0.id == self.librarySelection }) == false {
+                self.librarySelection = nil
+            }
+        }
+
+        if case .source(let source) = libraryFilter, !availableSources.contains(source) {
+            libraryFilter = .all
         }
     }
 

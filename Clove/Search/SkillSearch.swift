@@ -2,79 +2,85 @@ import Foundation
 
 enum SkillSearch {
     static func results(
-        skills: [Skill],
+        catalog: [CatalogEntry],
         query: String,
         userTags: [String: [String]],
         activeTag: String?
-    ) -> [Skill] {
-        let filtered: [Skill]
+    ) -> [CatalogEntry] {
+        let filtered: [CatalogEntry]
         if let activeTag {
-            filtered = skills.filter { skill in
-                mergedTags(for: skill, userTags: userTags).contains { tag in
+            filtered = catalog.filter { entry in
+                mergedTags(for: entry, userTags: userTags).contains { tag in
                     tag.localizedStandardCompare(activeTag) == .orderedSame
                 }
             }
         } else {
-            filtered = skills
+            filtered = catalog
         }
 
-        return ranked(skills: filtered, query: query, userTags: userTags)
+        return ranked(catalog: filtered, query: query, userTags: userTags)
     }
 
     static func library(
-        skills: [Skill],
+        catalog: [CatalogEntry],
         query: String,
         userTags: [String: [String]],
         filter: LibraryFilter
-    ) -> [Skill] {
-        let filtered: [Skill]
+    ) -> [CatalogEntry] {
+        let filtered: [CatalogEntry]
         switch filter {
         case .all:
-            filtered = skills
+            filtered = catalog
         case .source(let source):
-            filtered = skills.filter { $0.source == source }
+            filtered = catalog.filter { entry in
+                entry.copies.contains { $0.source == source }
+            }
         case .tag(let tag):
-            filtered = skills.filter { skill in
-                mergedTags(for: skill, userTags: userTags).contains {
+            filtered = catalog.filter { entry in
+                mergedTags(for: entry, userTags: userTags).contains {
                     $0.localizedStandardCompare(tag) == .orderedSame
                 }
             }
         }
 
-        return ranked(skills: filtered, query: query, userTags: userTags)
+        return ranked(catalog: filtered, query: query, userTags: userTags)
     }
 
-    static func count(of filter: LibraryFilter, in skills: [Skill], userTags: [String: [String]]) -> Int {
+    static func count(of filter: LibraryFilter, in catalog: [CatalogEntry], userTags: [String: [String]]) -> Int {
         switch filter {
         case .all:
-            skills.count
+            catalog.count
         case .source(let source):
-            skills.count { $0.source == source }
+            catalog.count { entry in
+                entry.copies.contains { $0.source == source }
+            }
         case .tag(let tag):
-            skills.count { skill in
-                mergedTags(for: skill, userTags: userTags).contains {
+            catalog.count { entry in
+                mergedTags(for: entry, userTags: userTags).contains {
                     $0.localizedStandardCompare(tag) == .orderedSame
                 }
             }
         }
     }
 
-    static func sections(from skills: [Skill]) -> [SkillSection] {
-        var grouped: [(SkillSource, String?, [Skill])] = []
+    static func sections(from catalog: [CatalogEntry]) -> [SkillSection] {
+        var grouped: [(SkillSource, String?, [CatalogEntry])] = []
         var index: [String: Int] = [:]
 
-        for skill in skills {
-            let key = skill.source.rawValue + "\u{1e}" + (skill.sourceDetail ?? "")
+        for entry in catalog {
+            let source = entry.primary.source
+            let detail = entry.primary.sourceDetail
+            let key = source.rawValue + "\u{1e}" + (detail ?? "")
             if let existing = index[key] {
-                grouped[existing].2.append(skill)
+                grouped[existing].2.append(entry)
             } else {
                 index[key] = grouped.count
-                grouped.append((skill.source, skill.sourceDetail, [skill]))
+                grouped.append((source, detail, [entry]))
             }
         }
 
-        return grouped.map { source, detail, skills in
-            SkillSection(source: source, detail: detail, skills: skills)
+        return grouped.map { source, detail, entries in
+            SkillSection(source: source, detail: detail, entries: entries)
         }
     }
 
@@ -88,6 +94,19 @@ enum SkillSearch {
                 continue
             }
             seen.append(trimmed)
+        }
+        return seen
+    }
+
+    static func mergedTags(for entry: CatalogEntry, userTags: [String: [String]]) -> [String] {
+        var seen: [String] = []
+        for skill in entry.copies {
+            for tag in mergedTags(for: skill, userTags: userTags) {
+                if seen.contains(where: { $0.localizedStandardCompare(tag) == .orderedSame }) {
+                    continue
+                }
+                seen.append(tag)
+            }
         }
         return seen
     }
@@ -117,17 +136,17 @@ enum SkillSearch {
     }
 
     private static func ranked(
-        skills: [Skill],
+        catalog: [CatalogEntry],
         query: String,
         userTags: [String: [String]]
-    ) -> [Skill] {
+    ) -> [CatalogEntry] {
         let tokens = tokenize(query)
-        guard !tokens.isEmpty else { return skills }
+        guard !tokens.isEmpty else { return catalog }
 
-        let scored: [(Skill, Int)] = skills.compactMap { skill in
-            let tags = mergedTags(for: skill, userTags: userTags)
-            guard let score = score(skill: skill, tags: tags, tokens: tokens) else { return nil }
-            return (skill, score)
+        let scored: [(CatalogEntry, Int)] = catalog.compactMap { entry in
+            let tags = mergedTags(for: entry, userTags: userTags)
+            guard let score = score(entry: entry, tags: tags, tokens: tokens) else { return nil }
+            return (entry, score)
         }
 
         return scored
@@ -138,10 +157,10 @@ enum SkillSearch {
             .map(\.0)
     }
 
-    private static func score(skill: Skill, tags: [String], tokens: [String]) -> Int? {
+    private static func score(entry: CatalogEntry, tags: [String], tokens: [String]) -> Int? {
         var total = 0
         for token in tokens {
-            guard let tokenScore = score(skill: skill, tags: tags, token: token) else {
+            guard let tokenScore = score(entry: entry, tags: tags, token: token) else {
                 return nil
             }
             total += tokenScore
@@ -149,8 +168,9 @@ enum SkillSearch {
         return total
     }
 
-    private static func score(skill: Skill, tags: [String], token: String) -> Int? {
-        let name = skill.displayName
+    private static func score(entry: CatalogEntry, tags: [String], token: String) -> Int? {
+        let skill = entry.primary
+        let name = entry.displayName
         if name.localizedStandardCompare(token) == .orderedSame {
             return 100
         }
@@ -166,8 +186,11 @@ enum SkillSearch {
         if tags.contains(where: { $0.localizedStandardContains(token) }) {
             return 50
         }
-        if skill.summary.localizedStandardContains(token) {
+        if entry.summary.localizedStandardContains(token) {
             return 30
+        }
+        if entry.isLinked, SkillCatalog.linkedSourceLabel(for: entry.sources).localizedStandardContains(token) {
+            return 25
         }
         if let detail = skill.sourceDetail, detail.localizedStandardContains(token) {
             return 20

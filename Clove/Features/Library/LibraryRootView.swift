@@ -3,22 +3,22 @@ import SwiftUI
 struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
     @Environment(UpdateService.self) private var updates
+    @Environment(LicenseService.self) private var license
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
-        NavigationSplitView {
-            LibrarySidebar()
-        } content: {
-            LibraryList()
-        } detail: {
-            LibraryDetail()
+        Group {
+            if license.isUnlocked {
+                librarySplit
+            } else {
+                LicenseActivationView()
+            }
         }
-        .navigationTitle("Clove")
-        .navigationSubtitle(subtitle)
         .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
+        .background(LibraryWindowAccessor())
         .task {
             await model.startIfNeeded()
             await updates.checkForUpdates()
@@ -28,8 +28,12 @@ struct LibraryRootView: View {
             WindowBridge.shared.openLibraryWindow = {
                 openWindow(id: CloveWindowID.library)
             }
+            LibraryWindowTracker.shared.registerOpenWindow {
+                openWindow(id: CloveWindowID.library)
+            }
         }
         .onChange(of: updates.availableUpdate) {
+            guard license.isUnlocked else { return }
             if offeredUpdate == nil {
                 offeredUpdate = updates.availableUpdate
             }
@@ -48,6 +52,21 @@ struct LibraryRootView: View {
             UpdateAvailableSheet(update: update)
                 .environment(updates)
         }
+        .onChange(of: license.isUnlocked) {
+            presentInitialSheets()
+        }
+    }
+
+    private var librarySplit: some View {
+        NavigationSplitView {
+            LibrarySidebar()
+        } content: {
+            LibraryList()
+        } detail: {
+            LibraryDetail()
+        }
+        .navigationTitle("Clove")
+        .navigationSubtitle(subtitle)
     }
 
     private func skipUpdateIfStillPending() {
@@ -61,11 +80,12 @@ struct LibraryRootView: View {
             return "Scanning"
         }
         guard model.didScan else { return "" }
-        let count = model.skills.count
+        let count = model.catalog.count
         return count == 1 ? "1 skill on this Mac" : "\(count) skills on this Mac"
     }
 
     private func presentInitialSheets() {
+        guard license.isUnlocked else { return }
         if !model.settings.hasCompletedOnboarding {
             isShowingOnboarding = true
             return
@@ -84,4 +104,5 @@ struct LibraryRootView: View {
     LibraryRootView()
         .environment(AppModel.preview)
         .environment(UpdateService(settings: AppModel.preview.settings))
+        .environment(LicenseService.shared)
 }

@@ -38,7 +38,7 @@ struct AboutSettingsPane: View {
                 SettingsPaneDivider()
 
                 SettingsFieldRow(label: "Skills indexed") {
-                    Text("\(model.skills.count)")
+                    Text("\(model.catalog.count)")
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }

@@ -1,35 +1,24 @@
 import SwiftUI
 
 struct SkillDetailHeader: View {
-    let skill: Skill
+    let entry: CatalogEntry
 
     var body: some View {
-        HStack(alignment: .center, spacing: Metrics.spacingM) {
-            SourceColorBlock(tint: skill.source.tint, size: 14)
-                .frame(width: Metrics.detailIcon, height: Metrics.detailIcon)
-                .background(skill.source.tint.opacity(0.12), in: .rect(cornerRadius: 8, style: .continuous))
+        VStack(alignment: .leading, spacing: Metrics.spacingS) {
+            Text(entry.displayName)
+                .font(.title3.weight(.semibold))
+                .lineLimit(1)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(skill.displayName)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
+            SourceBadgeRow(items: entry.sourceBadges)
 
-                Text(sourceLabel)
+            if entry.isLinked {
+                Text("Linked across \(entry.sourceBadges.count) locations with the same reference.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-    }
-
-    private var sourceLabel: String {
-        if let detail = skill.sourceDetail {
-            "\(skill.source.sectionTitle) · \(detail)"
-        } else {
-            skill.source.sectionTitle
-        }
     }
 }

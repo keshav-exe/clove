@@ -7,9 +7,9 @@ struct LibraryList: View {
         @Bindable var model = model
 
         List(selection: $model.librarySelection) {
-            ForEach(model.libraryResults) { skill in
-                LibraryRow(skill: skill)
-                    .tag(skill.id)
+            ForEach(model.libraryResults) { entry in
+                LibraryRow(entry: entry)
+                    .tag(entry.id)
             }
         }
         .listStyle(.inset)
@@ -23,7 +23,7 @@ struct LibraryList: View {
         .overlay {
             if model.isScanning && model.skills.isEmpty {
                 ProgressView("Looking for skills")
-            } else if model.skills.isEmpty && model.didScan {
+            } else if model.catalog.isEmpty && model.didScan {
                 EmptySkillsView(mode: .noSkills, onRefresh: refresh)
             } else if model.libraryResults.isEmpty {
                 EmptySkillsView(mode: .noResults(model.libraryQuery), onRefresh: nil)
@@ -78,8 +78,10 @@ struct LibraryList: View {
     }
 
     private func unassignedSkills(for group: String) -> [Skill] {
-        model.skills.filter { skill in
-            !model.tags(for: skill).contains { $0.localizedStandardCompare(group) == .orderedSame }
-        }
+        model.catalog
+            .filter { entry in
+                !model.tags(for: entry).contains { $0.localizedStandardCompare(group) == .orderedSame }
+            }
+            .map(\.primary)
     }
 }

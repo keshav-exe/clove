@@ -51,7 +51,7 @@ struct SourcesSettingsPane: View {
                         if model.isScanning {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text("\(model.skills.count)")
+                            Text("\(model.catalog.count)")
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }

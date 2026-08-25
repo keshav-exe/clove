@@ -5,8 +5,8 @@ struct LibraryDetail: View {
 
     var body: some View {
         Group {
-            if let skill = model.librarySelectedSkill {
-                SkillDetailView(skill: skill)
+            if let entry = model.librarySelectedEntry {
+                SkillDetailView(entry: entry)
             } else {
                 ContentUnavailableView(
                     "No Skill Selected",

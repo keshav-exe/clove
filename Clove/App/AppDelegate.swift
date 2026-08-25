@@ -27,6 +27,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         InsertTarget.startObserving()
         updates.applyDeferredInstallIfNeeded()
 
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(libraryWindowVisibilityChanged),
+            name: .libraryWindowVisibilityDidChange,
+            object: nil
+        )
+
         // Status items can fail to appear if created before the run loop settles.
         DispatchQueue.main.async { [weak self] in
             self?.applyStatusItem()
@@ -40,15 +47,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            WindowBridge.shared.showLibraryWindow()
-        }
+        LibraryWindowTracker.shared.showLibraryWindow()
         return true
+    }
+
+    @objc private func libraryWindowVisibilityChanged() {
+        applyActivationPolicy()
     }
 
     // MARK: - Settings
 
     private func applySettings() {
+        LibraryWindowTracker.shared.keepRunningInMenuBar = model.settings.keepRunningInMenuBar
         applyActivationPolicy()
         applyStatusItem()
         applyHotKey()
@@ -57,8 +67,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyActivationPolicy() {
         let settings = model.settings
-        let accessory = settings.hasCompletedOnboarding && settings.hideDockIcon && settings.showMenuBarIcon
-        NSApp.setActivationPolicy(accessory ? .accessory : .regular)
+        guard settings.hasCompletedOnboarding, settings.showMenuBarIcon else {
+            NSApp.setActivationPolicy(.regular)
+            return
+        }
+
+        let hideFromDock = settings.hideDockIcon
+            || (settings.keepRunningInMenuBar && !LibraryWindowTracker.shared.isLibraryVisible)
+        NSApp.setActivationPolicy(hideFromDock ? .accessory : .regular)
     }
 
     private func applyStatusItem() {
@@ -102,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = settings.hotKeyEnabled
             _ = settings.showMenuBarIcon
             _ = settings.hideDockIcon
+            _ = settings.keepRunningInMenuBar
             _ = settings.keepPanelOnTop
             _ = settings.hasCompletedOnboarding
         } onChange: { [weak self] in

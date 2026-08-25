@@ -9,10 +9,17 @@ struct GeneralSettingsPane: View {
         @Bindable var launch = launchAtLogin
 
         SettingsForm {
-            SettingsSection {
+            SettingsSection(
+                footer: "When enabled, closing the library window hides it instead of quitting. Clove stays available from the menu bar and shortcut. Hide Dock icon removes Clove from the Dock entirely, or only while the window is closed."
+            ) {
                 VStack(alignment: .leading, spacing: 0) {
                     SettingsCheckboxRow(title: "Launch at login", isOn: $launch.isEnabled)
                     SettingsCheckboxRow(title: "Show menu bar icon", isOn: $settings.showMenuBarIcon)
+                    SettingsCheckboxRow(
+                        title: "Keep running in menu bar when window is closed",
+                        isOn: $settings.keepRunningInMenuBar,
+                        isDisabled: !settings.showMenuBarIcon
+                    )
                     SettingsCheckboxRow(
                         title: "Hide Dock icon",
                         isOn: $settings.hideDockIcon,

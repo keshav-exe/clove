@@ -2,10 +2,10 @@ import Foundation
 
 /// Single switchboard for alpha vs paid releases.
 enum ReleaseConfiguration {
-    /// Alpha: free, no activation screen. Paid release: set to `true`.
-    static let requiresLicense = false
+    /// Paid release: activation screen + Dodo license checks.
+    static let requiresLicense = true
 
-    static let channelName = "Alpha"
+    static let channelName = "Release"
 
     static var isAlpha: Bool {
         !requiresLicense

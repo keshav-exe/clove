@@ -17,6 +17,11 @@ final class SettingsStore {
         didSet { defaults.set(hideDockIcon, forKey: Keys.hideDockIcon) }
     }
 
+    /// Closing the library window hides it and keeps Clove in the menu bar.
+    var keepRunningInMenuBar: Bool {
+        didSet { defaults.set(keepRunningInMenuBar, forKey: Keys.keepRunningInMenuBar) }
+    }
+
     var keepPanelOnTop: Bool {
         didSet { defaults.set(keepPanelOnTop, forKey: Keys.keepPanelOnTop) }
     }
@@ -82,7 +87,8 @@ final class SettingsStore {
         self.defaults = defaults
         hasCompletedOnboarding = defaults.bool(forKey: Keys.onboarded)
         showMenuBarIcon = defaults.flag(Keys.showMenuBarIcon, default: true)
-        hideDockIcon = defaults.flag(Keys.hideDockIcon, default: false)
+        hideDockIcon = defaults.flag(Keys.hideDockIcon, default: true)
+        keepRunningInMenuBar = defaults.flag(Keys.keepRunningInMenuBar, default: true)
         keepPanelOnTop = defaults.flag(Keys.keepPanelOnTop, default: false)
         includePlugins = defaults.flag(Keys.includePlugins, default: true)
         includeProjects = defaults.flag(Keys.includeProjects, default: true)
@@ -142,6 +148,7 @@ final class SettingsStore {
         static let onboarded = "hasCompletedOnboarding"
         static let showMenuBarIcon = "showMenuBarIcon"
         static let hideDockIcon = "hideDockIcon"
+        static let keepRunningInMenuBar = "keepRunningInMenuBar"
         static let keepPanelOnTop = "keepPanelOnTop"
         static let includePlugins = "includePlugins"
         static let includeProjects = "includeProjects"

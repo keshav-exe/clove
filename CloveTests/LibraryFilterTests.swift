@@ -30,37 +30,41 @@ struct LibraryFilterTests {
         ),
     ]
 
+    private var catalog: [CatalogEntry] {
+        SkillCatalog.build(from: skills)
+    }
+
     @Test func filtersBySource() {
         let results = SkillSearch.library(
-            skills: skills,
+            catalog: catalog,
             query: "",
             userTags: [:],
             filter: .source(.plugin)
         )
-        #expect(results.map(\.name) == ["nextjs"])
+        #expect(results.map(\.displayName) == ["nextjs"])
     }
 
     @Test func filtersByTagIncludingUserTags() {
         let results = SkillSearch.library(
-            skills: skills,
+            catalog: catalog,
             query: "",
             userTags: ["/tmp/create-skill/SKILL.md": ["authoring"]],
             filter: .tag("authoring")
         )
-        #expect(results.map(\.name) == ["create-skill"])
+        #expect(results.map(\.displayName) == ["create-skill"])
     }
 
     @Test func combinesFilterAndQuery() {
         let results = SkillSearch.library(
-            skills: skills,
+            catalog: catalog,
             query: "router",
             userTags: [:],
             filter: .source(.plugin)
         )
-        #expect(results.map(\.name) == ["nextjs"])
+        #expect(results.map(\.displayName) == ["nextjs"])
 
         let empty = SkillSearch.library(
-            skills: skills,
+            catalog: catalog,
             query: "router",
             userTags: [:],
             filter: .source(.claude)
@@ -69,8 +73,8 @@ struct LibraryFilterTests {
     }
 
     @Test func countsMatchFilters() {
-        #expect(SkillSearch.count(of: .all, in: skills, userTags: [:]) == 3)
-        #expect(SkillSearch.count(of: .source(.claude), in: skills, userTags: [:]) == 1)
-        #expect(SkillSearch.count(of: .tag("swiftui"), in: skills, userTags: [:]) == 1)
+        #expect(SkillSearch.count(of: .all, in: catalog, userTags: [:]) == 3)
+        #expect(SkillSearch.count(of: .source(.claude), in: catalog, userTags: [:]) == 1)
+        #expect(SkillSearch.count(of: .tag("swiftui"), in: catalog, userTags: [:]) == 1)
     }
 }

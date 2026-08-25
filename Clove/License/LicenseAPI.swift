@@ -15,125 +15,180 @@ enum LicenseAPI {
         }
     }
 
-    private struct Response: Decodable {
-        let activated: Bool?
-        let valid: Bool?
-        let deactivated: Bool?
-        let error: String?
-        let instance: Instance?
-        let meta: Meta?
+    private static var baseURL: URL {
+        #if DEBUG
+        URL(string: "https://test.dodopayments.com")!
+        #else
+        URL(string: "https://live.dodopayments.com")!
+        #endif
+    }
 
-        struct Instance: Decodable {
-            let id: String
-        }
+    private struct ActivateRequest: Encodable {
+        let licenseKey: String
+        let name: String
 
-        struct Meta: Decodable {
-            let customerEmail: String?
-
-            enum CodingKeys: String, CodingKey {
-                case customerEmail = "customer_email"
-            }
+        enum CodingKeys: String, CodingKey {
+            case licenseKey = "license_key"
+            case name
         }
     }
 
-    static func activate(licenseKey: String) async throws -> LicenseRecord {
-        let response = try await post(
-            path: "licenses/activate",
-            fields: [
-                "license_key": licenseKey,
-                "instance_name": MachineIdentity.instanceName,
-            ]
-        )
+    private struct ActivateResponse: Decodable {
+        let id: String
+        let customer: Customer?
 
-        guard response.activated == true, let instanceID = response.instance?.id else {
-            throw Error.rejected(response.error ?? "This license key could not be activated.")
+        struct Customer: Decodable {
+            let email: String?
         }
+    }
+
+    private struct ValidateRequest: Encodable {
+        let licenseKey: String
+        let licenseKeyInstanceID: String
+
+        enum CodingKeys: String, CodingKey {
+            case licenseKey = "license_key"
+            case licenseKeyInstanceID = "license_key_instance_id"
+        }
+    }
+
+    private struct ValidateResponse: Decodable {
+        let valid: Bool
+    }
+
+    private struct DeactivateRequest: Encodable {
+        let licenseKey: String
+        let licenseKeyInstanceID: String
+
+        enum CodingKeys: String, CodingKey {
+            case licenseKey = "license_key"
+            case licenseKeyInstanceID = "license_key_instance_id"
+        }
+    }
+
+    private struct APIErrorBody: Decodable {
+        let code: String?
+        let message: String?
+    }
+
+    static func activate(licenseKey: String) async throws -> LicenseRecord {
+        let response: ActivateResponse = try await post(
+            path: "licenses/activate",
+            body: ActivateRequest(licenseKey: licenseKey, name: MachineIdentity.instanceName),
+            expectedStatus: 201
+        )
 
         let now = Date.now
         return LicenseRecord(
             licenseKey: licenseKey,
-            instanceID: instanceID,
+            instanceID: response.id,
             instanceName: MachineIdentity.instanceName,
-            customerEmail: response.meta?.customerEmail,
+            customerEmail: response.customer?.email,
             activatedAt: now,
             lastValidatedAt: now
         )
     }
 
     static func validate(record: LicenseRecord) async throws -> LicenseRecord {
-        let response = try await post(
+        let response: ValidateResponse = try await post(
             path: "licenses/validate",
-            fields: [
-                "license_key": record.licenseKey,
-                "instance_id": record.instanceID,
-            ]
+            body: ValidateRequest(
+                licenseKey: record.licenseKey,
+                licenseKeyInstanceID: record.instanceID
+            ),
+            expectedStatus: 200
         )
 
-        guard response.valid == true else {
-            throw Error.rejected(response.error ?? "This license is no longer valid on this Mac.")
+        guard response.valid else {
+            throw Error.rejected("This license is no longer valid on this Mac.")
         }
 
         var updated = record
         updated.lastValidatedAt = .now
-        if let email = response.meta?.customerEmail {
-            updated = LicenseRecord(
-                licenseKey: updated.licenseKey,
-                instanceID: updated.instanceID,
-                instanceName: updated.instanceName,
-                customerEmail: email,
-                activatedAt: updated.activatedAt,
-                lastValidatedAt: updated.lastValidatedAt
-            )
-        }
         return updated
     }
 
     static func deactivate(record: LicenseRecord) async throws {
-        let response = try await post(
+        try await post(
             path: "licenses/deactivate",
-            fields: [
-                "license_key": record.licenseKey,
-                "instance_id": record.instanceID,
-            ]
+            body: DeactivateRequest(
+                licenseKey: record.licenseKey,
+                licenseKeyInstanceID: record.instanceID
+            ),
+            expectedStatus: 200
         )
+    }
 
-        guard response.deactivated == true else {
-            throw Error.rejected(response.error ?? "Could not deactivate this Mac.")
+    private static func post<Body: Encodable, Response: Decodable>(
+        path: String,
+        body: Body,
+        expectedStatus: Int
+    ) async throws -> Response {
+        let data = try await send(path: path, body: body, expectedStatus: expectedStatus)
+        do {
+            return try JSONDecoder().decode(Response.self, from: data)
+        } catch {
+            throw Error.invalidResponse
         }
     }
 
-    private static func post(path: String, fields: [String: String]) async throws -> Response {
-        var request = URLRequest(url: URL(string: "https://api.lemonsqueezy.com/v1/\(path)")!)
+    private static func post<Body: Encodable>(
+        path: String,
+        body: Body,
+        expectedStatus: Int
+    ) async throws {
+        _ = try await send(path: path, body: body, expectedStatus: expectedStatus)
+    }
+
+    private static func send<Body: Encodable>(
+        path: String,
+        body: Body,
+        expectedStatus: Int
+    ) async throws -> Data {
+        var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = formBody(fields)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw Error.invalidResponse
         }
 
-        let envelope = try JSONDecoder().decode(Response.self, from: data)
-        if let message = envelope.error, !message.isEmpty {
-            throw Error.rejected(message)
+        if http.statusCode == expectedStatus {
+            return data
         }
-        guard (200 ... 299).contains(http.statusCode) else {
-            throw Error.rejected("License server returned HTTP \(http.statusCode).")
-        }
-        return envelope
+
+        throw Error.rejected(userMessage(status: http.statusCode, data: data))
     }
 
-    private static func formBody(_ fields: [String: String]) -> Data {
-        fields
-            .map { key, value in
-                "\(formEncode(key))=\(formEncode(value))"
-            }
-            .joined(separator: "&")
-            .data(using: .utf8) ?? Data()
-    }
+    private static func userMessage(status: Int, data: Data) -> String {
+        let body = try? JSONDecoder().decode(APIErrorBody.self, from: data)
+        switch body?.code {
+        case "LICENSE_KEY_LIMIT_REACHED":
+            return "This license is already activated on the maximum number of Macs."
+        case "INACTIVE_LICENSE_KEY":
+            return "This license is no longer active."
+        case "LICENSE_KEY_NOT_FOUND":
+            return "This license key was not found."
+        default:
+            break
+        }
 
-    private static func formEncode(_ value: String) -> String {
-        value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+        if let message = body?.message, !message.isEmpty {
+            return message
+        }
+
+        switch status {
+        case 403:
+            return "This license is no longer active."
+        case 404:
+            return "This license key was not found."
+        case 422:
+            return "This license is already activated on the maximum number of Macs."
+        default:
+            return "License server returned HTTP \(status)."
+        }
     }
 }

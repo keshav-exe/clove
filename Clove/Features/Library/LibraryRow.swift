@@ -2,29 +2,34 @@ import SwiftUI
 
 struct LibraryRow: View {
     @Environment(AppModel.self) private var model
-    let skill: Skill
+    let entry: CatalogEntry
 
     var body: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(skill.displayName)
-                    .font(.body.weight(.medium))
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: Metrics.spacingXS) {
+            Text(entry.displayName)
+                .font(.body.weight(.medium))
+                .lineLimit(1)
 
-                Text(skill.summary.isEmpty ? "No description" : skill.summary)
+            if !entry.summary.isEmpty {
+                Text(entry.summary)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("No description")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
-        } icon: {
-            SourceColorBlock(tint: skill.source.tint, size: 10)
-                .frame(width: 20, height: 20)
+
+            SourceBadgeRow(items: entry.sourceBadges)
         }
-        .labelStyle(.titleAndIcon)
-        .padding(.vertical, 3)
-        .skillDraggable(skill)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .skillDraggable(entry.primary)
         .contextMenu {
-            SkillActionButtons(skill: skill)
+            SkillActionButtons(skill: entry.primary)
         }
     }
 }

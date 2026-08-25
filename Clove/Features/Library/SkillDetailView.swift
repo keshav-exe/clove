@@ -2,18 +2,20 @@ import SwiftUI
 
 struct SkillDetailView: View {
     @Environment(AppModel.self) private var model
-    let skill: Skill
+    let entry: CatalogEntry
+
+    private var skill: Skill { entry.primary }
 
     var body: some View {
         Form {
             Section {
-                SkillDetailHeader(skill: skill)
+                SkillDetailHeader(entry: entry)
             }
 
             Section("Description") {
-                Text(skill.summary.isEmpty ? "This skill has no description." : skill.summary)
+                Text(entry.summary.isEmpty ? "This skill has no description." : entry.summary)
                     .font(.callout)
-                    .foregroundStyle(skill.summary.isEmpty ? .secondary : .primary)
+                    .foregroundStyle(entry.summary.isEmpty ? .secondary : .primary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -22,8 +24,39 @@ struct SkillDetailView: View {
                 SkillTagEditor(skill: skill)
             }
 
+            if entry.isLinked {
+                Section {
+                    ForEach(entry.copies, id: \.id) { copy in
+                        LabeledContent(copy.source.sectionTitle) {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(copy.resolvedPath)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                                    .truncationMode(.middle)
+                                    .lineLimit(2)
+
+                                HStack(spacing: Metrics.spacingS) {
+                                    Button("Reveal") {
+                                        model.reveal(copy)
+                                    }
+
+                                    Button("Open") {
+                                        model.open(copy)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Installed In")
+                } footer: {
+                    Text("This skill uses the same reference everywhere it is linked.")
+                }
+            }
+
             Section {
-                LabeledContent("Reference", value: skill.reference)
+                LabeledContent("Reference", value: entry.reference)
 
                 LabeledContent("Folder", value: skill.directoryName)
 
@@ -44,18 +77,18 @@ struct SkillDetailView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(skill.displayName)
+        .navigationTitle(entry.displayName)
         .toolbar {
             ToolbarItemGroup {
                 Button("Insert", systemImage: "text.cursor") {
                     model.insert(skill)
                 }
-                .help("Paste \(skill.reference) into the focused prompt")
+                .help("Paste \(entry.reference) into the focused prompt")
 
                 Button("Copy Reference", systemImage: "doc.on.doc") {
                     model.copyReference(skill)
                 }
-                .help("Copy \(skill.reference)")
+                .help("Copy \(entry.reference)")
 
                 Button("Reveal in Finder", systemImage: "folder") {
                     model.reveal(skill)

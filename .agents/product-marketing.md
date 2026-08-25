@@ -12,7 +12,7 @@
 
 **Product type:** Native macOS app
 
-**Business model:** One-time purchase via Lemon Squeezy ($39 list, $19.99 intro). License key per purchase, 2 Mac activations, offline grace 14 days. Direct download from store (not App Store).
+**Business model:** One-time purchase via Dodo Payments ($39 list, $19.99 intro). License key per purchase, 2 Mac activations, offline grace 14 days. Direct download from store (not App Store).
 
 ## Target Audience
 
@@ -60,7 +60,7 @@
 - Reads every skill source on-device in one place
 - Copies prompt-ready references (`/skill`, `@project-skill`), not file paths
 - Native macOS UI: library window + pinned floating panel
-- Skill data stays on-device; license checks only hit Lemon Squeezy
+- Skill data stays on-device; license checks only hit Dodo Payments
 
 **How we do it differently:** Local filesystem scan + user tags + keyboard-first panel optimized for prompt workflows
 
@@ -101,37 +101,37 @@ Tags already behave like groups when filtered:
 
 Until then: **tags ARE groups for copy purposes.** Ship "Copy all in group" on tag filters (done in panel).
 
-## Licensing (Lemon Squeezy)
+## Licensing (Dodo Payments)
 
 **Pricing:** $39.00 list, $19.99 introductory one-time purchase. No subscription.
 
 **Flow:**
-1. Customer buys on Lemon Squeezy store → receives license key by email
-2. First launch → `LicenseActivationView` → activate against LS License API
+1. Customer buys on the Dodo payment link → receives license key by email
+2. First launch → `LicenseActivationView` → activate against Dodo public license API
 3. Key + instance ID stored in Keychain; validate on launch + 14-day offline grace
 4. Settings → License → deactivate to free a slot when moving Macs
 
 **Anti-sharing (realistic):**
-- Activation limit: 2 Macs per key (set in LS product + `LicenseConfiguration.activationLimit`)
-- Instance-bound validation (`license_key` + `instance_id`)
+- Activation limit: 2 Macs per key (set on the License Key entitlement + `LicenseConfiguration.activationLimit`)
+- Instance-bound validation (`license_key` + `license_key_instance_id`)
 - Periodic online validation; grace period prevents false lockouts on flights
 - Deactivate in Settings before selling/gifting the Mac
 
 **What we cannot prevent:** Someone sharing the `.app` + key. No Mac DRM is bulletproof outside App Store. Activation limits + online checks deter casual sharing; determined pirates will crack anything distributed as a binary.
 
 **Store setup checklist:**
-- Lemon Squeezy product with license keys enabled
-- Activation limit = 2
+- One-time product in Dodo with a License Key entitlement attached
+- Activations limit = 2, duration blank (perpetual one-time)
 - Intro discount $19.99 (regular $39)
-- Update `LicenseConfiguration.purchaseURL`
-- Gate download behind purchase (LS secure download or manual delivery)
+- Paste the live payment link into `LicenseConfiguration.purchaseURL`
+- Gate download behind purchase (Dodo file entitlement or manual delivery after `payment.succeeded`)
 
 ## Objections
 
 | Objection | Response |
 |-----------|----------|
 | "Another menu bar app?" | Optional menu bar; opens as normal Dock app. Panel is opt-in via hotkey. |
-| "Is my skill data uploaded?" | Never. Skill scanning is on-device. License checks hit Lemon Squeezy only. |
+| "Is my skill data uploaded?" | Never. Skill scanning is on-device. License checks hit Dodo Payments only. |
 | "Why not just use Cursor's picker?" | Clove sees Claude, Codex, plugins, and project skills too — in one search. |
 
 **Anti-persona:** Developers with <10 skills who don't use agent prompts regularly.

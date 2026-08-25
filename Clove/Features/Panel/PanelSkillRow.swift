@@ -3,29 +3,28 @@ import SwiftUI
 
 struct PanelSkillRow: View {
     @Environment(AppModel.self) private var model
-    let skill: Skill
+    let entry: CatalogEntry
+
+    private var skill: Skill { entry.primary }
 
     private var isSelected: Bool {
         model.isSelected(skill)
     }
 
     private var tags: [String] {
-        model.tags(for: skill)
+        model.tags(for: entry)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: Metrics.spacingS) {
-                SourceColorBlock(tint: isSelected ? Color.accentColor : skill.source.tint)
-                    .frame(width: 14, alignment: .center)
-
+        VStack(alignment: .leading, spacing: Metrics.spacingXS) {
+            HStack(alignment: .firstTextBaseline, spacing: Metrics.spacingS) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(skill.displayName)
+                    Text(entry.displayName)
                         .font(.system(size: 12.5, weight: .medium))
                         .lineLimit(1)
 
-                    if !skill.summary.isEmpty {
-                        Text(skill.summary)
+                    if !entry.summary.isEmpty {
+                        Text(entry.summary)
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -39,19 +38,20 @@ struct PanelSkillRow: View {
                 }
             }
 
+            SourceBadgeRow(items: entry.sourceBadges)
+
             if isSelected, !tags.isEmpty {
                 WrappingTagRow(tags: tags) { tag in
                     TagChip(
                         title: tag,
                         isActive: model.activeTag == tag,
                         onSelect: { model.toggleTagFilter(tag) },
-                        onRemove: model.isUserTag(tag, for: skill)
+                        onRemove: model.isUserTag(tag, for: entry)
                             ? { model.removeTag(tag, from: skill) }
                             : nil,
                         onCopy: { model.copyGroup(tag) }
                     )
                 }
-                .padding(.leading, 22)
             }
         }
         .padding(.horizontal, Metrics.rowPaddingHorizontal)
@@ -64,7 +64,7 @@ struct PanelSkillRow: View {
         .contentShape(.rect(cornerRadius: Metrics.rowRadius))
         .onTapGesture(perform: handleTap)
         .skillDraggable(skill)
-        .help("\(skill.reference) — Return copies, drag to drop into a prompt")
+        .help("\(entry.reference) — Return copies, drag to drop into a prompt")
         .contextMenu {
             SkillActionButtons(skill: skill)
         }

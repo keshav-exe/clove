@@ -5,7 +5,11 @@ struct SkillSection: Identifiable, Hashable, Sendable {
 
     let source: SkillSource
     let detail: String?
-    let skills: [Skill]
+    let entries: [CatalogEntry]
+
+    var skills: [Skill] {
+        entries.map(\.primary)
+    }
 
     var title: String {
         if let detail, source == .plugin || source == .project {

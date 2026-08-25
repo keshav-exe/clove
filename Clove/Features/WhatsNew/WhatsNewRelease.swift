@@ -39,6 +39,34 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "0.2",
+            title: "What's New in Clove",
+            subtitle: "One skill, every source it is installed in.",
+            symbolName: "link",
+            features: [
+                FeatureHighlight(
+                    symbolName: "link",
+                    title: "Linked Skills",
+                    detail: "The same skill in Cursor, Claude, and other folders now appears once, with every source listed."
+                ),
+                FeatureHighlight(
+                    symbolName: "tag",
+                    title: "Source Badges",
+                    detail: "See which agents a skill is installed in without opening the file."
+                ),
+                FeatureHighlight(
+                    symbolName: "folder",
+                    title: "Installed In",
+                    detail: "Reveal or open each copy of a linked skill from the detail pane."
+                ),
+                FeatureHighlight(
+                    symbolName: "key",
+                    title: "License",
+                    detail: "Clove is a one-time purchase. Activate with the key from your receipt, on up to two Macs."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
