@@ -21,8 +21,9 @@ struct TagChip: View {
             }
         }
         .font(.caption)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .padding(.leading, 8)
+        .padding(.trailing, onRemove == nil ? 8 : 4)
+        .padding(.vertical, 3)
         .background(
             isActive ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.07),
             in: .capsule

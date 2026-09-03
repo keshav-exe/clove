@@ -10,8 +10,8 @@ struct PanelShortcutHints: View {
     var body: some View {
         HStack(spacing: 8) {
             hint(keys: ["↑↓"], label: "move")
-            hint(keys: ["↩"], label: "copy")
-            hint(keys: ["⌘↩"], label: "insert")
+            hint(keys: ["↩"], label: "insert")
+            hint(keys: ["⌥↩"], label: "copy")
 
             if !model.pinnedGroups.isEmpty {
                 hint(keys: ["⇥"], label: "groups")
@@ -39,7 +39,7 @@ struct PanelShortcutHints: View {
     }
 
     private var accessibilitySummary: String {
-        var parts = ["Arrow keys move", "Return copies", "Command Return inserts"]
+        var parts = ["Arrow keys move", "Return inserts", "Option Return copies"]
         if !model.pinnedGroups.isEmpty {
             parts.append("Tab cycles pinned groups")
         }

@@ -7,98 +7,77 @@ struct SkillDetailView: View {
     private var skill: Skill { entry.primary }
 
     var body: some View {
-        Form {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Metrics.spacingXL) {
                 SkillDetailHeader(entry: entry)
-            }
 
-            Section("Description") {
-                Text(entry.summary.isEmpty ? "This skill has no description." : entry.summary)
-                    .font(.callout)
-                    .foregroundStyle(entry.summary.isEmpty ? .secondary : .primary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+                SkillDetailSection(title: "Groups") {
+                    SkillTagEditor(skill: skill)
+                }
 
-            Section("Groups") {
-                SkillTagEditor(skill: skill)
-            }
-
-            if entry.isLinked {
-                Section {
-                    ForEach(entry.copies, id: \.id) { copy in
-                        LabeledContent(copy.source.sectionTitle) {
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(copy.resolvedPath)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
-                                    .truncationMode(.middle)
-                                    .lineLimit(2)
-
-                                HStack(spacing: Metrics.spacingS) {
-                                    Button("Reveal") {
-                                        model.reveal(copy)
-                                    }
-
-                                    Button("Open") {
-                                        model.open(copy)
-                                    }
-                                }
-                            }
-                        }
+                if entry.isLinked {
+                    SkillDetailSection(title: "Installed in") {
+                        SkillInstallList(entry: entry)
                     }
-                } header: {
-                    Text("Installed In")
-                } footer: {
-                    Text("This skill uses the same reference everywhere it is linked.")
+                }
+
+                SkillDetailSection(title: "File") {
+                    SkillFileInfo(entry: entry, showsPath: !entry.isLinked)
                 }
             }
-
-            Section {
-                LabeledContent("Reference", value: entry.reference)
-
-                LabeledContent("Folder", value: skill.directoryName)
-
-                LabeledContent("Modified") {
-                    Text(skill.modifiedAt, format: .dateTime.day().month().year().hour().minute())
-                }
-
-                LabeledContent("Path") {
-                    Text(skill.resolvedPath)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .truncationMode(.middle)
-                        .lineLimit(2)
-                }
-            } header: {
-                Text("File")
-            }
+            .padding(Metrics.spacingXL)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .formStyle(.grouped)
+        .scrollClipDisabled()
         .navigationTitle(entry.displayName)
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup {
-                Button("Insert", systemImage: "text.cursor") {
-                    model.insert(skill)
-                }
-                .help("Paste \(entry.reference) into the focused prompt")
+                Button("Copy Reference", systemImage: "doc.on.doc", action: copyReference)
+                    .help("Copy \(entry.reference)")
 
-                Button("Copy Reference", systemImage: "doc.on.doc") {
-                    model.copyReference(skill)
-                }
-                .help("Copy \(entry.reference)")
+                Button("Insert", systemImage: "text.cursor", action: insert)
+                    .help("Paste \(entry.reference) into the focused prompt")
 
-                Button("Reveal in Finder", systemImage: "folder") {
-                    model.reveal(skill)
+                Menu("More", systemImage: "ellipsis") {
+                    Button("Reveal in Finder", systemImage: "folder", action: reveal)
+                    Button("Open in Default Editor", systemImage: "doc.text", action: open)
+                    Button("Copy Name", systemImage: "textformat", action: copyName)
                 }
-
-                Button("Open", systemImage: "arrow.up.forward.app") {
-                    model.open(skill)
-                }
-                .help("Open SKILL.md in your default editor")
+                .menuIndicator(.hidden)
             }
         }
     }
+
+    private func copyReference() {
+        model.copyReference(skill)
+    }
+
+    private func insert() {
+        model.insert(skill)
+    }
+
+    private func reveal() {
+        model.reveal(skill)
+    }
+
+    private func open() {
+        model.open(skill)
+    }
+
+    private func copyName() {
+        model.copyName(skill)
+    }
+}
+
+#Preview {
+    SkillDetailView(
+        entry: CatalogEntry(
+            key: "preview",
+            primary: AppModel.preview.skills[0],
+            copies: AppModel.preview.skills
+        )
+    )
+    .environment(AppModel.preview)
+    .frame(width: 420, height: 560)
 }

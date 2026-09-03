@@ -27,6 +27,8 @@ enum Metrics {
     static let panelRadius: Double = 16
     static let rowRadius: Double = 7
     static let tileRadius: Double = 6
+    static let controlRadius: Double = 8
+    static let suggestionMenuMaxHeight: Double = 196
 
     static let tileIcon: Double = 20
     static let detailIcon: Double = 34

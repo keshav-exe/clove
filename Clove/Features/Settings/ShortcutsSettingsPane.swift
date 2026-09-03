@@ -28,8 +28,8 @@ struct ShortcutsSettingsPane: View {
                 SettingsPaneDivider()
 
                 SettingsSection {
-                    SettingsShortcutRow(action: "Copy", keys: "↩")
-                    SettingsShortcutRow(action: "Insert", keys: "⌘↩")
+                    SettingsShortcutRow(action: "Insert", keys: "↩")
+                    SettingsShortcutRow(action: "Copy and keep panel", keys: "⌥↩")
                     SettingsShortcutRow(action: "Move selection", keys: "↑ ↓")
                     SettingsShortcutRow(action: "Extend selection", keys: "⇧ ↑ ↓")
                     SettingsShortcutRow(action: "Multi-select", keys: "⌘ click")

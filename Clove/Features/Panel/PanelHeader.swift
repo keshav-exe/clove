@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PanelHeader: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.closePanel) private var closePanel
     @FocusState.Binding var focus: PanelFocus?
 
     var body: some View {
@@ -19,7 +20,14 @@ struct PanelHeader: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($focus, equals: .search)
-                .onSubmit(model.ensureSelectionVisible)
+                .onSubmit {
+                    let flags = NSEvent.modifierFlags
+                    model.confirmPanelSelection(
+                        option: flags.contains(.option),
+                        command: flags.contains(.command),
+                        dismiss: closePanel
+                    )
+                }
                 .accessibilityLabel("Search skills")
 
             if !model.query.isEmpty {

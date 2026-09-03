@@ -37,7 +37,11 @@ final class PanelKeyRouter {
     /// Returns `true` when the panel consumed the key, so the field editor
     /// never sees it.
     private func handle(_ event: NSEvent) -> Bool {
-        guard let panel, event.window === panel else { return false }
+        guard let panel else { return false }
+        // SwiftUI field editors sometimes report a nil window. Accept the event
+        // when the panel is key, or when the event is clearly from this panel.
+        if let window = event.window, window !== panel { return false }
+        if event.window == nil, !panel.isKeyWindow { return false }
 
         let flags = event.modifierFlags
             .intersection(.deviceIndependentFlagsMask)
@@ -120,22 +124,10 @@ final class PanelKeyRouter {
         }
     }
 
-    /// Return copies and gets out of the way. Option keeps the panel up so you
-    /// can grab a second skill, Command types the reference into the app you
-    /// came from.
+    /// Return types the highlighted skill into the app you came from.
+    /// Option keeps the panel up and only copies, so you can grab another.
     private func handleReturn(command: Bool, option: Bool) -> Bool {
-        guard !model.selectedSkills.isEmpty else { return true }
-
-        if command {
-            model.insertSelected()
-            onClose()
-            return true
-        }
-
-        model.copySelectedReferences()
-        if !option {
-            onClose()
-        }
+        model.confirmPanelSelection(option: option, command: command, dismiss: onClose)
         return true
     }
 
