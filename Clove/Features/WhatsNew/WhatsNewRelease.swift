@@ -62,6 +62,29 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "1.0",
+            title: "What's New in Clove",
+            subtitle: "Clove is free and open source.",
+            symbolName: "sparkles",
+            features: [
+                FeatureHighlight(
+                    symbolName: "gift",
+                    title: "Free",
+                    detail: "Every feature is unlocked. No license key, no account, no purchase."
+                ),
+                FeatureHighlight(
+                    symbolName: "chevron.left.forwardslash.chevron.right",
+                    title: "Open Source",
+                    detail: "Clove is MIT licensed. Use it, fork it, and change it."
+                ),
+                FeatureHighlight(
+                    symbolName: "lock.shield",
+                    title: "Still on-device",
+                    detail: "Skills never leave your Mac. Optional update checks are the only network call."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
