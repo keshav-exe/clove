@@ -61,15 +61,10 @@ struct LibraryList: View {
                 }
             }
         }
-        .background {
-            Button("Copy Selected Skill") {
-                if let skill = model.librarySelectedSkill {
-                    model.copyReference(skill)
-                }
-            }
-            .keyboardShortcut(.return, modifiers: [])
-            .opacity(0)
-            .accessibilityHidden(true)
+        .onKeyPress(.return) {
+            guard let skill = model.librarySelectedSkill else { return .ignored }
+            model.copyReference(skill)
+            return .handled
         }
     }
 

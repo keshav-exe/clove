@@ -350,18 +350,35 @@ final class AppModel {
         copy(references.joined(separator: " "))
     }
 
-    // MARK: - Insert (context menu only)
+    // MARK: - Insert
+
+    /// Return types the highlighted skill into the app you came from.
+    /// Option keeps the panel open and only copies, so you can grab another.
+    func confirmPanelSelection(option: Bool, command: Bool, dismiss: () -> Void) {
+        guard !selectedSkills.isEmpty else { return }
+        if option, !command {
+            copySelectedReferences()
+            return
+        }
+        dismiss()
+        insertSelected()
+    }
 
     func insert(_ skill: Skill) {
-        let window = WindowBridge.shared.panelWindow?.isKeyWindow == true
-            ? WindowBridge.shared.panelWindow
-            : NSApp.keyWindow
-        SkillInserter.insert(skill.reference, resigningFrom: window)
+        insertReferences([skill.reference])
     }
 
     func insertSelected() {
-        guard let skill = selectedSkill else { return }
-        insert(skill)
+        insertReferences(selectedSkills.map(\.reference))
+    }
+
+    private func insertReferences(_ references: [String]) {
+        let text = references.joined(separator: " ")
+        guard !text.isEmpty else { return }
+        let window = WindowBridge.shared.panelWindow?.isKeyWindow == true
+            ? WindowBridge.shared.panelWindow
+            : NSApp.keyWindow
+        SkillInserter.insert(text, resigningFrom: window)
     }
 
     // MARK: - File actions

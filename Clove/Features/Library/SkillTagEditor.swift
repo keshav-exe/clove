@@ -4,18 +4,16 @@ struct SkillTagEditor: View {
     @Environment(AppModel.self) private var model
     let skill: Skill
 
-    @State private var draft = ""
-
     private var groups: [String] {
         model.tags(for: skill)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Metrics.spacingS) {
+        VStack(alignment: .leading, spacing: Metrics.spacingM) {
             if groups.isEmpty {
-                Text("No groups yet. Groups are stored locally and make search faster.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("Not in a group yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
             } else {
                 WrappingTagRow(tags: groups) { group in
                     TagChip(
@@ -29,37 +27,8 @@ struct SkillTagEditor: View {
                 }
             }
 
-            HStack(spacing: Metrics.spacingS) {
-                TextField("Add to group", text: $draft)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(commit)
-
-                Menu {
-                    ForEach(model.allGroups, id: \.self) { group in
-                        if !groups.contains(where: { $0.localizedStandardCompare(group) == .orderedSame }) {
-                            Button(group) {
-                                model.addSkillToGroup(skill, group: group)
-                            }
-                        }
-                    }
-                    if model.allGroups.isEmpty {
-                        Text("No groups yet")
-                    }
-                } label: {
-                    Image(systemName: "folder.badge.plus")
-                }
-                .menuStyle(.borderlessButton)
-                .help("Add to an existing group")
-
-                Button("Add", action: commit)
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
+            GroupPickerField(skill: skill)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func commit() {
-        model.addTag(draft, to: skill)
-        draft = ""
     }
 }
