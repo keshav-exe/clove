@@ -60,11 +60,6 @@ enum WhatsNewCatalog {
                     title: "Installed In",
                     detail: "Reveal or open each copy of a linked skill from the detail pane."
                 ),
-                FeatureHighlight(
-                    symbolName: "key",
-                    title: "License",
-                    detail: "Clove is a one-time purchase. Activate with the key from your receipt, on up to two Macs."
-                ),
             ]
         ),
     ]

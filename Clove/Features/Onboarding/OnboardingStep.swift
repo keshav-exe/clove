@@ -37,9 +37,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .welcome:
             "Every agent skill installed on your Mac, in one searchable place."
         case .privacy:
-            ReleaseConfiguration.requiresLicense
-                ? "Clove reads local files and goes online only to verify your license."
-                : "Clove reads local files only. Nothing is uploaded or synced."
+            "Clove reads local files only. Nothing is uploaded or synced."
         case .permissions:
             "Accessibility lets Clove drop skills straight into your editor."
         case .folders:

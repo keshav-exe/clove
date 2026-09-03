@@ -130,10 +130,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func togglePanel() {
-        guard LicenseService.shared.isUnlocked else {
-            WindowBridge.shared.showLibraryWindow()
-            return
-        }
         panel?.toggle(relativeTo: statusItem?.button)
     }
 }

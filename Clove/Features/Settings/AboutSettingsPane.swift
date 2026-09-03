@@ -15,12 +15,6 @@ struct AboutSettingsPane: View {
                     Text(AppVersion.display)
                 }
 
-                if ReleaseConfiguration.isAlpha {
-                    SettingsFieldRow(label: "Channel") {
-                        Text(ReleaseConfiguration.channelName)
-                    }
-                }
-
                 SettingsFieldRow(label: "Updates") {
                     if updates.isChecking {
                         ProgressView().controlSize(.small)

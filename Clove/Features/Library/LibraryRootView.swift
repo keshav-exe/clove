@@ -3,58 +3,47 @@ import SwiftUI
 struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
     @Environment(UpdateService.self) private var updates
-    @Environment(LicenseService.self) private var license
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
-        Group {
-            if license.isUnlocked {
-                librarySplit
-            } else {
-                LicenseActivationView()
+        librarySplit
+            .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
+            .background(LibraryWindowAccessor())
+            .task {
+                await model.startIfNeeded()
+                await updates.checkForUpdates()
+                presentInitialSheets()
             }
-        }
-        .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
-        .background(LibraryWindowAccessor())
-        .task {
-            await model.startIfNeeded()
-            await updates.checkForUpdates()
-            presentInitialSheets()
-        }
-        .onAppear {
-            WindowBridge.shared.openLibraryWindow = {
-                openWindow(id: CloveWindowID.library)
+            .onAppear {
+                WindowBridge.shared.openLibraryWindow = {
+                    openWindow(id: CloveWindowID.library)
+                }
+                LibraryWindowTracker.shared.registerOpenWindow {
+                    openWindow(id: CloveWindowID.library)
+                }
             }
-            LibraryWindowTracker.shared.registerOpenWindow {
-                openWindow(id: CloveWindowID.library)
+            .onChange(of: updates.availableUpdate) {
+                if offeredUpdate == nil {
+                    offeredUpdate = updates.availableUpdate
+                }
             }
-        }
-        .onChange(of: updates.availableUpdate) {
-            guard license.isUnlocked else { return }
-            if offeredUpdate == nil {
-                offeredUpdate = updates.availableUpdate
+            .sheet(isPresented: $isShowingOnboarding) {
+                OnboardingFlow()
+                    .environment(model)
+                    .interactiveDismissDisabled()
             }
-        }
-        .sheet(isPresented: $isShowingOnboarding) {
-            OnboardingFlow()
-                .environment(model)
-                .interactiveDismissDisabled()
-        }
-        .sheet(item: $whatsNewRelease) { release in
-            WhatsNewSheet(release: release) {
-                model.settings.lastSeenWhatsNewVersion = release.version
+            .sheet(item: $whatsNewRelease) { release in
+                WhatsNewSheet(release: release) {
+                    model.settings.lastSeenWhatsNewVersion = release.version
+                }
             }
-        }
-        .sheet(item: $offeredUpdate, onDismiss: skipUpdateIfStillPending) { update in
-            UpdateAvailableSheet(update: update)
-                .environment(updates)
-        }
-        .onChange(of: license.isUnlocked) {
-            presentInitialSheets()
-        }
+            .sheet(item: $offeredUpdate, onDismiss: skipUpdateIfStillPending) { update in
+                UpdateAvailableSheet(update: update)
+                    .environment(updates)
+            }
     }
 
     private var librarySplit: some View {
@@ -85,7 +74,6 @@ struct LibraryRootView: View {
     }
 
     private func presentInitialSheets() {
-        guard license.isUnlocked else { return }
         if !model.settings.hasCompletedOnboarding {
             isShowingOnboarding = true
             return
@@ -104,5 +92,4 @@ struct LibraryRootView: View {
     LibraryRootView()
         .environment(AppModel.preview)
         .environment(UpdateService(settings: AppModel.preview.settings))
-        .environment(LicenseService.shared)
 }

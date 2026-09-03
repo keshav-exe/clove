@@ -5,20 +5,11 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case sources
     case shortcuts
     case privacy
-    case license
     case about
 
     var id: String { rawValue }
 
-    /// Sidebar entries for the current release channel.
-    static var visibleCases: [SettingsPane] {
-        var panes: [SettingsPane] = [.general, .sources, .shortcuts, .privacy]
-        if ReleaseConfiguration.requiresLicense {
-            panes.append(.license)
-        }
-        panes.append(.about)
-        return panes
-    }
+    static var visibleCases: [SettingsPane] { allCases }
 
     var title: String {
         switch self {
@@ -26,7 +17,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sources: "Sources"
         case .shortcuts: "Shortcuts"
         case .privacy: "Privacy"
-        case .license: "License"
         case .about: "About"
         }
     }
@@ -37,7 +27,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sources: "folder"
         case .shortcuts: "keyboard"
         case .privacy: "lock.shield"
-        case .license: "key"
         case .about: "info.circle"
         }
     }

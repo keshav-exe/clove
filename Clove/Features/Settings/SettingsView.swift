@@ -33,7 +33,6 @@ struct SettingsView: View {
         case .sources: SourcesSettingsPane()
         case .shortcuts: ShortcutsSettingsPane()
         case .privacy: PrivacySettingsPane()
-        case .license: LicenseSettingsPane()
         case .about: AboutSettingsPane()
         }
     }
