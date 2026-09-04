@@ -85,6 +85,29 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "1.1",
+            title: "What's New in Clove",
+            subtitle: "Insert skills on Return, and a cleaner detail view.",
+            symbolName: "sparkles",
+            features: [
+                FeatureHighlight(
+                    symbolName: "text.cursor",
+                    title: "Insert on Return",
+                    detail: "Return in the panel types the highlighted skill into the prompt you came from. Option+Return still copies."
+                ),
+                FeatureHighlight(
+                    symbolName: "folder",
+                    title: "Add to Group",
+                    detail: "One field with suggestions — type to create a group or pick an existing one."
+                ),
+                FeatureHighlight(
+                    symbolName: "doc.text",
+                    title: "Skill Detail",
+                    detail: "The detail pane is easier to scan, with copyable references and cleaner file info."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
