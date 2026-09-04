@@ -6,7 +6,7 @@ Native Mac app that finds every agent skill on your machine and lets you copy or
 
 [Download for Mac](https://github.com/keshav-exe/clove/releases/latest) · [Website](https://www.kshv.me/clove)
 
-<img src="https://www.kshv.me/clove/product-preview.png" alt="Clove quick access panel searching agent skills" width="720" />
+<img src="docs/product-preview.png" alt="Clove quick access panel searching agent skills" width="360" />
 
 ## What it does
 
