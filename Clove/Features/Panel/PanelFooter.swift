@@ -13,12 +13,12 @@ struct PanelFooter: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            groupActionsRow
-                .opacity(groups.isEmpty ? 0 : 1)
-                .allowsHitTesting(!groups.isEmpty)
+            if !groups.isEmpty {
+                groupActionsRow
 
-            Divider()
-                .opacity(0.6)
+                Divider()
+                    .opacity(0.6)
+            }
 
             PanelShortcutHints()
         }

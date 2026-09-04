@@ -7,10 +7,6 @@ struct PanelSkillRow: View {
 
     private var skill: Skill { entry.primary }
 
-    private var isSelected: Bool {
-        model.isSelected(skill)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.spacingXS) {
             HStack(alignment: .firstTextBaseline, spacing: Metrics.spacingS) {
@@ -29,29 +25,21 @@ struct PanelSkillRow: View {
 
                 Spacer(minLength: Metrics.spacingXS)
 
-                if isSelected {
+                if model.isSelected(skill) {
                     KeyHint(symbol: "↩")
                 }
             }
 
             SourceBadgeRow(items: entry.sourceBadges)
         }
-        .padding(.horizontal, Metrics.rowPaddingHorizontal)
-        .padding(.vertical, Metrics.rowPaddingVertical)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            isSelected ? Color.accentColor.opacity(0.16) : .clear,
-            in: .rect(cornerRadius: Metrics.rowRadius)
-        )
-        .contentShape(.rect(cornerRadius: Metrics.rowRadius))
+        .contentShape(.rect)
         .onTapGesture(perform: handleTap)
         .skillDraggable(skill)
         .help("\(entry.reference) — Return inserts into the prompt you came from")
         .contextMenu {
             SkillActionButtons(skill: skill)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func handleTap() {

@@ -43,16 +43,45 @@ struct PanelSelectionTests {
         #expect(model.selectionFocusID == claude!.id)
     }
 
-    private func makeModel() -> AppModel {
-        let defaults = UserDefaults(suiteName: "clove.panel-selection.\(UUID().uuidString)")!
-        let model = AppModel(
-            settings: SettingsStore(defaults: defaults),
-            persistence: TagPersistence(
-                fileURL: URL.temporaryDirectory.appending(path: "clove-panel-selection-\(UUID().uuidString).json")
-            )
-        )
-        model.didScan = true
-        model.skills = [
+    @Test func downArrowFollowsOnScreenOrderNotSearchRank() {
+        let model = makeModel(skills: [
+            TestSkill.make(
+                name: "alpha",
+                summary: "Cursor skill A.",
+                path: "/tmp/alpha/SKILL.md",
+                directoryName: "alpha",
+                source: .cursor
+            ),
+            TestSkill.make(
+                name: "beta",
+                summary: "Claude skill B.",
+                path: "/tmp/beta/SKILL.md",
+                directoryName: "beta",
+                source: .claude
+            ),
+            TestSkill.make(
+                name: "gamma",
+                summary: "Cursor skill C.",
+                path: "/tmp/gamma/SKILL.md",
+                directoryName: "gamma",
+                source: .cursor
+            ),
+        ])
+
+        let items = model.visibleSkills
+        #expect(items.map(\.name) == ["alpha", "gamma", "beta"])
+
+        model.selectExclusive(items[0])
+        model.selectNext()
+        #expect(model.selectionFocusID == items[1].id)
+        #expect(model.selectedSkill?.name == "gamma")
+
+        model.selectNext()
+        #expect(model.selectedSkill?.name == "beta")
+    }
+
+    private func makeModel(
+        skills: [Skill] = [
             TestSkill.make(
                 name: "swiftui-pro",
                 summary: "Review Swift and SwiftUI code.",
@@ -78,6 +107,16 @@ struct PanelSelectionTests {
                 frontmatterTags: ["next"]
             ),
         ]
+    ) -> AppModel {
+        let defaults = UserDefaults(suiteName: "clove.panel-selection.\(UUID().uuidString)")!
+        let model = AppModel(
+            settings: SettingsStore(defaults: defaults),
+            persistence: TagPersistence(
+                fileURL: URL.temporaryDirectory.appending(path: "clove-panel-selection-\(UUID().uuidString).json")
+            )
+        )
+        model.didScan = true
+        model.skills = skills
         return model
     }
 }

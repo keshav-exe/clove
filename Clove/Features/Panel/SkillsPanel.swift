@@ -61,7 +61,6 @@ struct SkillsPanel: View {
         .onChange(of: model.focusTick) {
             focus = model.focusTarget
         }
-        .animation(Motion.selection(reduceMotion), value: model.selectedIDs)
         .animation(Motion.selection(reduceMotion), value: model.activeTag)
         .defaultFocus($focus, .search)
     }

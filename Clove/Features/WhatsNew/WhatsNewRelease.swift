@@ -117,7 +117,7 @@ enum WhatsNewCatalog {
                 FeatureHighlight(
                     symbolName: "arrow.up.arrow.down",
                     title: "Panel Navigation",
-                    detail: "Down and Up move one skill. The list no longer jumps to the next group."
+                    detail: "Down and Up move to the next skill on screen, in list order — not search rank, and not the next group."
                 ),
                 FeatureHighlight(
                     symbolName: "shift",

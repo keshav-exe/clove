@@ -51,10 +51,9 @@ final class AppModel {
         SkillCatalog.build(from: skills)
     }
 
-    /// Flattened section order, so arrow keys walk the rows in the order they
-    /// are drawn rather than in raw search-rank order.
+    /// On-screen order: section headers, then the skills under them.
     var visibleSkills: [Skill] {
-        rankedCatalog.map(\.primary)
+        sections.flatMap { $0.entries.map(\.primary) }
     }
 
     var sections: [SkillSection] {
@@ -277,6 +276,37 @@ final class AppModel {
         selectedIDs = Set(items.map(\.id))
         selectionAnchorID = items.first?.id
         selectionFocusID = items.last?.id
+    }
+
+    /// Clicks in the panel `List` write the selection set directly.
+    func applyPanelListSelection(_ ids: Set<Skill.ID>) {
+        if ids.isEmpty {
+            ensureSelectionVisible()
+            if activeFocus != .search {
+                requestFocus(.search)
+            }
+            return
+        }
+
+        let added = ids.subtracting(selectedIDs)
+        selectedIDs = ids
+        let ordered = visibleSkills.filter { ids.contains($0.id) }
+        if ids.count == 1, let id = ordered.first?.id {
+            selectionAnchorID = id
+            selectionFocusID = id
+        } else if let id = added.first, let match = ordered.first(where: { $0.id == id }) {
+            selectionFocusID = match.id
+        } else if let focus = selectionFocusID, ids.contains(focus) {
+            if let anchor = selectionAnchorID, !ids.contains(anchor) {
+                selectionAnchorID = ordered.first?.id
+            }
+        } else {
+            selectionFocusID = ordered.last?.id ?? ordered.first?.id
+            selectionAnchorID = ordered.first?.id
+        }
+        if activeFocus != .search {
+            requestFocus(.search)
+        }
     }
 
     func clearQuery() {
@@ -616,7 +646,7 @@ final class AppModel {
 
         let focusID = selectionFocusID
             ?? selectionAnchorID
-            ?? selectedIDs.first
+            ?? items.first(where: { selectedIDs.contains($0.id) })?.id
             ?? (offset >= 0 ? items.first?.id : items.last?.id)
 
         guard

@@ -18,9 +18,9 @@ struct PanelSectionHeader: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, Metrics.rowPaddingHorizontal)
-        .padding(.top, Metrics.spacingS)
-        .padding(.bottom, 3)
+        .padding(.horizontal, 2)
+        .padding(.top, 1)
+        .padding(.bottom, 1)
         .accessibilityAddTraits(.isHeader)
     }
 }

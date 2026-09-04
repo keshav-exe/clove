@@ -6,7 +6,7 @@ enum AppVersion {
     }
 
     static var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "5"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "6"
     }
 
     static var display: String {
