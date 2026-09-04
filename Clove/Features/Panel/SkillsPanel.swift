@@ -49,6 +49,9 @@ struct SkillsPanel: View {
         .onChange(of: model.query) {
             model.ensureSelectionVisible()
         }
+        .onChange(of: model.activeTag) {
+            model.ensureSelectionVisible()
+        }
         .onChange(of: model.displayTick) {
             focus = .search
         }

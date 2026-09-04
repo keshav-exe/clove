@@ -14,6 +14,9 @@ final class AppModel {
     var query = ""
     var selectedIDs: Set<Skill.ID> = []
     var selectionAnchorID: Skill.ID?
+    /// Moving end of the panel selection. `selectedSkills.last` is list order,
+    /// so Shift+Up and scroll-into-view cannot use it as the caret.
+    var selectionFocusID: Skill.ID?
     var activeTag: String?
     var footerText = ""
     var displayTick = 0
@@ -72,7 +75,12 @@ final class AppModel {
     }
 
     var selectedSkill: Skill? {
-        selectedSkills.last ?? selectedSkills.first
+        if let selectionFocusID,
+           let focused = visibleSkills.first(where: { $0.id == selectionFocusID }),
+           selectedIDs.contains(focused.id) {
+            return focused
+        }
+        return selectedSkills.last ?? selectedSkills.first
     }
 
     var libraryResults: [CatalogEntry] {
@@ -212,6 +220,7 @@ final class AppModel {
     func selectExclusive(_ skill: Skill) {
         selectedIDs = [skill.id]
         selectionAnchorID = skill.id
+        selectionFocusID = skill.id
     }
 
     func toggleSelection(_ skill: Skill) {
@@ -221,6 +230,7 @@ final class AppModel {
             selectedIDs.insert(skill.id)
         }
         selectionAnchorID = skill.id
+        selectionFocusID = skill.id
     }
 
     func extendSelection(to skill: Skill) {
@@ -240,6 +250,7 @@ final class AppModel {
         let range = min(anchorIndex, targetIndex)...max(anchorIndex, targetIndex)
         selectedIDs = Set(visibleSkills[range].map(\.id))
         selectionAnchorID = anchor
+        selectionFocusID = skill.id
     }
 
     func selectNext(extending: Bool = false) {
@@ -265,6 +276,7 @@ final class AppModel {
         guard !items.isEmpty else { return }
         selectedIDs = Set(items.map(\.id))
         selectionAnchorID = items.first?.id
+        selectionFocusID = items.last?.id
     }
 
     func clearQuery() {
@@ -273,9 +285,27 @@ final class AppModel {
 
     func ensureSelectionVisible() {
         selectedIDs = selectedIDs.filter { id in visibleSkills.contains { $0.id == id } }
-        guard selectedIDs.isEmpty, let first = visibleSkills.first?.id else { return }
+
+        if let focus = selectionFocusID, selectedIDs.contains(focus) {
+            return
+        }
+        if let anchor = selectionAnchorID, selectedIDs.contains(anchor) {
+            selectionFocusID = anchor
+            return
+        }
+        if let firstSelected = selectedSkills.first?.id {
+            selectionFocusID = firstSelected
+            selectionAnchorID = selectionAnchorID ?? firstSelected
+            return
+        }
+        guard let first = visibleSkills.first?.id else {
+            selectionFocusID = nil
+            selectionAnchorID = nil
+            return
+        }
         selectedIDs = [first]
         selectionAnchorID = first
+        selectionFocusID = first
     }
 
     // MARK: - Copy
@@ -330,6 +360,10 @@ final class AppModel {
 
         if let selectionAnchorID {
             self.selectionAnchorID = primaryID(for: selectionAnchorID)
+        }
+
+        if let selectionFocusID {
+            self.selectionFocusID = primaryID(for: selectionFocusID)
         }
 
         if let librarySelection {
@@ -411,10 +445,12 @@ final class AppModel {
         } else {
             activeTag = tag
         }
+        ensureSelectionVisible()
     }
 
     func clearTagFilter() {
         activeTag = nil
+        ensureSelectionVisible()
     }
 
     func createGroup(named raw: String) {
@@ -492,6 +528,7 @@ final class AppModel {
         } else {
             activeTag = groups[0]
         }
+        ensureSelectionVisible()
     }
 
     func addSkillToGroup(_ skill: Skill, group name: String) {
@@ -552,6 +589,7 @@ final class AppModel {
         settings.pinnedGroups = []
         activeTag = nil
         libraryFilter = .all
+        ensureSelectionVisible()
     }
 
     // MARK: - App
@@ -569,44 +607,42 @@ final class AppModel {
         if case .tag(let filtered) = libraryFilter, filtered.localizedStandardCompare(tag) == .orderedSame {
             libraryFilter = .all
         }
+        ensureSelectionVisible()
     }
 
     private func moveSelection(by offset: Int, extending: Bool) {
         let items = visibleSkills
         guard !items.isEmpty else { return }
 
+        let focusID = selectionFocusID
+            ?? selectionAnchorID
+            ?? selectedIDs.first
+            ?? (offset >= 0 ? items.first?.id : items.last?.id)
+
+        guard
+            let focusID,
+            let focusIndex = items.firstIndex(where: { $0.id == focusID })
+        else {
+            if offset >= 0 { selectFirst() } else { selectLast() }
+            return
+        }
+
+        let next = min(max(focusIndex + offset, 0), items.count - 1)
+        let skill = items[next]
+        selectionFocusID = skill.id
+
         if extending {
-            let anchor = selectionAnchorID ?? selectedIDs.first ?? items.first?.id
-            guard
-                let anchor,
-                let anchorIndex = items.firstIndex(where: { $0.id == anchor })
-            else { return }
-
-            let focusIndex: Int
-            if let lastSelected = selectedSkills.last?.id,
-               let index = items.firstIndex(where: { $0.id == lastSelected }) {
-                focusIndex = index
-            } else {
-                focusIndex = anchorIndex
+            let anchor = selectionAnchorID ?? focusID
+            guard let anchorIndex = items.firstIndex(where: { $0.id == anchor }) else {
+                selectExclusive(skill)
+                return
             }
-
-            let next = min(max(focusIndex + offset, 0), items.count - 1)
             let range = min(anchorIndex, next)...max(anchorIndex, next)
             selectedIDs = Set(items[range].map(\.id))
             selectionAnchorID = anchor
             return
         }
 
-        let focusIndex: Int
-        if let lastSelected = selectedSkills.last?.id,
-           let index = items.firstIndex(where: { $0.id == lastSelected }) {
-            focusIndex = index
-        } else {
-            focusIndex = offset >= 0 ? 0 : items.count - 1
-        }
-
-        let next = min(max(focusIndex + offset, 0), items.count - 1)
-        let skill = items[next]
         selectedIDs = [skill.id]
         selectionAnchorID = skill.id
     }

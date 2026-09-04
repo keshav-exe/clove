@@ -11,10 +11,6 @@ struct PanelSkillRow: View {
         model.isSelected(skill)
     }
 
-    private var tags: [String] {
-        model.tags(for: entry)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.spacingXS) {
             HStack(alignment: .firstTextBaseline, spacing: Metrics.spacingS) {
@@ -39,20 +35,6 @@ struct PanelSkillRow: View {
             }
 
             SourceBadgeRow(items: entry.sourceBadges)
-
-            if isSelected, !tags.isEmpty {
-                WrappingTagRow(tags: tags) { tag in
-                    TagChip(
-                        title: tag,
-                        isActive: model.activeTag == tag,
-                        onSelect: { model.toggleTagFilter(tag) },
-                        onRemove: model.isUserTag(tag, for: entry)
-                            ? { model.removeTag(tag, from: skill) }
-                            : nil,
-                        onCopy: { model.copyGroup(tag) }
-                    )
-                }
-            }
         }
         .padding(.horizontal, Metrics.rowPaddingHorizontal)
         .padding(.vertical, Metrics.rowPaddingVertical)

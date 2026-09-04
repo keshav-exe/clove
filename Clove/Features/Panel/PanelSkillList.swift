@@ -2,7 +2,6 @@ import SwiftUI
 
 struct PanelSkillList: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if model.isScanning && model.skills.isEmpty {
@@ -21,7 +20,7 @@ struct PanelSkillList: View {
     private var list: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 1) {
                     ForEach(model.sections) { section in
                         PanelSectionHeader(title: section.title, count: section.entries.count)
 
@@ -35,12 +34,27 @@ struct PanelSkillList: View {
                 .padding(.vertical, 5)
             }
             .scrollIndicators(.never)
-            .onChange(of: model.selectedSkills.last?.id) { _, newValue in
-                guard let newValue else { return }
-                withAnimation(Motion.selection(reduceMotion)) {
-                    proxy.scrollTo(newValue, anchor: .center)
-                }
+            .onChange(of: model.selectionFocusID) {
+                revealSelection(proxy)
             }
+            .onChange(of: model.query) {
+                revealSelection(proxy)
+            }
+            .onChange(of: model.activeTag) {
+                revealSelection(proxy)
+            }
+            .onChange(of: model.displayTick) {
+                revealSelection(proxy)
+            }
+        }
+    }
+
+    private func revealSelection(_ proxy: ScrollViewProxy) {
+        guard let id = model.selectionFocusID ?? model.selectedSkills.last?.id else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            proxy.scrollTo(id)
         }
     }
 

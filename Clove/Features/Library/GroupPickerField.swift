@@ -91,6 +91,9 @@ struct GroupPickerField: View {
                     .onChange(of: highlightedIndex) { _, newValue in
                         scrollToHighlight(proxy, index: newValue)
                     }
+                    .onChange(of: draft) {
+                        scrollToHighlight(proxy, index: highlightedIndex)
+                    }
                 }
             } else {
                 rows

@@ -108,6 +108,24 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "1.2",
+            title: "What's New in Clove",
+            subtitle: "Arrow keys in the panel stay on one skill at a time.",
+            symbolName: "arrow.up.arrow.down",
+            features: [
+                FeatureHighlight(
+                    symbolName: "arrow.up.arrow.down",
+                    title: "Panel Navigation",
+                    detail: "Down and Up move one skill. The list no longer jumps to the next group."
+                ),
+                FeatureHighlight(
+                    symbolName: "shift",
+                    title: "Shift+Arrow",
+                    detail: "Shift+Up extends the selection instead of getting stuck after one row."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
