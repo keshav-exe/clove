@@ -27,11 +27,14 @@ final class LibraryWindowTracker: NSObject, NSWindowDelegate {
         guard window !== self.window else { return }
         self.window = window
         window.delegate = self
+        window.title = "Clove"
         window.isReleasedWhenClosed = !keepRunningInMenuBar
         isLibraryVisible = window.isVisible
+        NotificationCenter.default.post(name: .libraryWindowVisibilityDidChange, object: nil)
     }
 
     func showLibraryWindow() {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         if let window {
             window.makeKeyAndOrderFront(nil)
@@ -49,7 +52,8 @@ final class LibraryWindowTracker: NSObject, NSWindowDelegate {
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
-        setVisible(true)
+        isLibraryVisible = true
+        NotificationCenter.default.post(name: .libraryWindowVisibilityDidChange, object: nil)
     }
 
     func windowDidMiniaturize(_ notification: Notification) {

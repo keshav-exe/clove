@@ -20,6 +20,7 @@ final class WindowBridge {
     }
 
     func showSettings() {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }

@@ -2,11 +2,11 @@ import Foundation
 
 enum AppVersion {
     static var short: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3"
     }
 
     static var build: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "6"
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "7"
     }
 
     static var display: String {

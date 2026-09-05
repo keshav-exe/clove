@@ -67,14 +67,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyActivationPolicy() {
         let settings = model.settings
-        guard settings.hasCompletedOnboarding, settings.showMenuBarIcon else {
-            NSApp.setActivationPolicy(.regular)
-            return
+        let wantsMenuBar = LibraryWindowTracker.shared.isLibraryVisible
+            || hasVisibleRegularWindow
+
+        let next: NSApplication.ActivationPolicy
+        if !settings.hasCompletedOnboarding || !settings.showMenuBarIcon {
+            next = .regular
+        } else if wantsMenuBar {
+            // Library/settings must own the menu bar or Clove → Settings never exists.
+            next = .regular
+        } else if settings.hideDockIcon || settings.keepRunningInMenuBar {
+            next = .accessory
+        } else {
+            next = .regular
         }
 
-        let hideFromDock = settings.hideDockIcon
-            || (settings.keepRunningInMenuBar && !LibraryWindowTracker.shared.isLibraryVisible)
-        NSApp.setActivationPolicy(hideFromDock ? .accessory : .regular)
+        guard NSApp.activationPolicy() != next else { return }
+        NSApp.setActivationPolicy(next)
+        if next == .regular {
+            NSApp.activate()
+        }
+    }
+
+    private var hasVisibleRegularWindow: Bool {
+        NSApp.windows.contains { window in
+            guard window.isVisible, window.canBecomeKey else { return false }
+            if window is NSPanel { return false }
+            if window === WindowBridge.shared.panelWindow { return false }
+            return true
+        }
     }
 
     private func applyStatusItem() {

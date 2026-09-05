@@ -126,6 +126,24 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "1.3",
+            title: "What's New in Clove",
+            subtitle: "The library is a real Mac app again.",
+            symbolName: "menubar.rectangle",
+            features: [
+                FeatureHighlight(
+                    symbolName: "menubar.rectangle",
+                    title: "Menu Bar",
+                    detail: "Opening the library puts Clove in the menu bar, with Settings and shortcuts."
+                ),
+                FeatureHighlight(
+                    symbolName: "gearshape",
+                    title: "Settings",
+                    detail: "Open Settings from Clove → Settings, ⌘,, or the gear in the sidebar."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {

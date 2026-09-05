@@ -50,6 +50,13 @@ struct LibrarySidebar: View {
                 }
                 .help("Create a new group")
             }
+
+            ToolbarItem {
+                Button("Settings", systemImage: "gearshape") {
+                    WindowBridge.shared.showSettings()
+                }
+                .help("Open Clove settings")
+            }
         }
         .alert("New Group", isPresented: $isCreatingGroup) {
             TextField("Group name", text: $newGroupName)
