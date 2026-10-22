@@ -14,7 +14,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
-        case .sources: "Sources"
+        case .sources: "Folders"
         case .shortcuts: "Shortcuts"
         case .privacy: "Privacy"
         case .about: "About"

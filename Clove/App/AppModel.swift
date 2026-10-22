@@ -48,16 +48,20 @@ final class AppModel {
     /// permissions, grouped by kind.
     private(set) var resources: [ResourceKind: [AgentResource]] = [:]
     var resourceSelection: AgentResource.ID?
+    /// Project folders, most recently changed first, for "install in a project".
+    private(set) var projects: [URL] = []
     var resourceQuery = ""
 
     /// Which part of the main window is showing.
-    var section: SidebarItem = .library(.all)
+    var section: SidebarItem = .home
     var isShowingSkillBuilder = false
 
     let settings: SettingsStore
     let marketplace: MarketplaceStore
     let manager: SkillManager
     let cleanup = CleanupStore()
+    let secrets = SecretsStore()
+    let running = RunningStore()
     private let scanner: SkillScanner
     private let persistence: TagPersistence
 
@@ -162,12 +166,31 @@ final class AppModel {
     func show(_ item: SidebarItem) {
         section = item
         switch item {
-        case .discover(let feed):
-            marketplace.feed = feed
+        case .discover:
+            break
         case .library(let filter):
             libraryFilter = filter
-        case .cleanup, .resources:
+        case .home, .cleanup, .resources, .secrets, .running:
             break
+        }
+    }
+
+    private static func recentFirst(_ folders: [URL]) -> [URL] {
+        let dated = folders.map { folder in
+            (folder, (try? folder.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast)
+        }
+        return dated.sorted { $0.1 > $1.1 }.map(\.0)
+    }
+
+    /// Configured MCP servers, so a running one shows its configured name.
+    /// Built once per scan: Running polls every few seconds.
+    private(set) var knownServers: [RunningScanner.KnownServer] = []
+
+    private func buildKnownServers() -> [RunningScanner.KnownServer] {
+        resources(of: .mcpServers).compactMap { resource in
+            guard let config = MCPServerConfig.load(from: resource) else { return nil }
+            let signature = config.args.first { !$0.hasPrefix("-") } ?? config.command ?? ""
+            return RunningScanner.KnownServer(name: resource.name, signature: signature)
         }
     }
 
@@ -260,12 +283,12 @@ final class AppModel {
 
     func isUserTag(_ tag: String, for entry: CatalogEntry) -> Bool {
         entry.copies.contains { skill in
-            (userTags[skill.id] ?? []).contains { $0.localizedStandardCompare(tag) == .orderedSame }
+            (userTags[skill.tagKey] ?? []).contains { $0.localizedStandardCompare(tag) == .orderedSame }
         }
     }
 
     func isUserTag(_ tag: String, for skill: Skill) -> Bool {
-        (userTags[skill.id] ?? []).contains { $0.localizedStandardCompare(tag) == .orderedSame }
+        (userTags[skill.tagKey] ?? []).contains { $0.localizedStandardCompare(tag) == .orderedSame }
     }
 
     func isSelected(_ skill: Skill) -> Bool {
@@ -286,11 +309,13 @@ final class AppModel {
         isScanning = true
         defer { isScanning = false }
         let configuration = settings.scanConfiguration
+        projects = Self.recentFirst(AgentConfigScanner().projects(in: configuration.projectRoots))
         async let configScan = AgentConfigScanner().scan(
             projectContainers: configuration.includeProjects ? configuration.projectRoots : []
         )
         skills = await scanner.scan(configuration: configuration)
         resources = Dictionary(grouping: await configScan, by: \.kind)
+        knownServers = buildKnownServers()
         if let resourceSelection, allResources.contains(where: { $0.id == resourceSelection }) == false {
             self.resourceSelection = nil
         }
@@ -712,20 +737,20 @@ final class AppModel {
     func addTag(_ raw: String, to skill: Skill) {
         let tag = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !tag.isEmpty else { return }
-        var tags = userTags[skill.id] ?? []
+        var tags = userTags[skill.tagKey] ?? []
         if tags.contains(where: { $0.localizedStandardCompare(tag) == .orderedSame }) {
             return
         }
         tags.append(tag)
-        userTags[skill.id] = tags
+        userTags[skill.tagKey] = tags
         persistence.save(userTags)
         ensureGroupExists(tag)
     }
 
     func removeTag(_ tag: String, from skill: Skill) {
-        guard var tags = userTags[skill.id] else { return }
+        guard var tags = userTags[skill.tagKey] else { return }
         tags.removeAll { $0.localizedStandardCompare(tag) == .orderedSame }
-        userTags[skill.id] = tags.isEmpty ? nil : tags
+        userTags[skill.tagKey] = tags.isEmpty ? nil : tags
         persistence.save(userTags)
         dropFilters(forRemoved: tag)
     }

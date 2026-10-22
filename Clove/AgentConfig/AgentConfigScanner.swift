@@ -95,7 +95,7 @@ struct AgentConfigScanner: Sendable {
     // MARK: - Projects
 
     /// Each folder directly inside a project container, like ~/Developer/app.
-    private func projects(in containers: [URL]) -> [URL] {
+    func projects(in containers: [URL]) -> [URL] {
         let fileManager = FileManager.default
         return containers.flatMap { container in
             ((try? fileManager.contentsOfDirectory(

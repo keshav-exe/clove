@@ -13,9 +13,9 @@ enum SkillSource: String, CaseIterable, Sendable, Comparable {
     var sectionTitle: String {
         switch self {
         case .cursor: "Cursor"
-        case .cursorBuiltin: "Cursor Built-in"
-        case .claude: "Claude"
-        case .agents: "Agents"
+        case .cursorBuiltin: "Cursor (built-in)"
+        case .claude: "Claude Code"
+        case .agents: "Shared"
         case .codex: "Codex"
         case .plugin: "Plugins"
         case .project: "Projects"

@@ -18,11 +18,6 @@ struct CleanupList: View {
             }
         }
         .listStyle(.inset)
-        .navigationSplitViewColumnWidth(
-            min: Metrics.listMinWidth,
-            ideal: Metrics.listIdealWidth + 40,
-            max: 460
-        )
         .navigationTitle("Cleanup")
         .overlay {
             CleanupListStatus(state: cleanup.usage, isEmpty: candidates.isEmpty, window: cleanup.window)

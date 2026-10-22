@@ -4,18 +4,18 @@ struct OnboardingWelcomeStep: View {
     private let highlights = [
         FeatureHighlight(
             symbolName: "magnifyingglass",
-            title: "Search everything at once",
-            detail: "Names, descriptions, and groups across Cursor, Claude, Codex, Agents, plugins, and projects."
+            title: "Every skill in one place",
+            detail: "Search across Claude Code, Cursor, Codex, plugins, and your projects, then drop a skill into any prompt."
         ),
         FeatureHighlight(
-            symbolName: "pin",
-            title: "Pin it beside your editor",
-            detail: "The quick access panel floats above other apps so your list stays in view while you work."
+            symbolName: "text.document",
+            title: "See what your agents load",
+            detail: "Instruction files, rules, MCP servers, and hooks for every agent, with what each costs in context."
         ),
         FeatureHighlight(
-            symbolName: "folder",
-            title: "Group skills your way",
-            detail: "Collect related skills into groups. Pin groups to the panel and copy them all at once."
+            symbolName: "leaf",
+            title: "Clear out what you don't use",
+            detail: "Find idle skills, plus the browsers and packages agents download and forget."
         ),
     ]
 

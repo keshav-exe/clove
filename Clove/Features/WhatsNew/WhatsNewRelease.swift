@@ -153,23 +153,22 @@ enum WhatsNewCatalog {
                 FeatureHighlight(
                     symbolName: "leaf",
                     title: "Cleanup",
-                    detail: "See which skills and commands your agents never call, what they cost every session, and how much old history sits on disk. Remove them in one click, with undo."
+                    detail: "See the skills and commands your agents never use and what they cost every session. Remove them in one click, with undo."
                 ),
                 FeatureHighlight(
-                    symbolName: "slider.horizontal.3",
-                    title: "Agent Setup",
-                    detail: "CLAUDE.md and AGENTS.md files, Cursor rules, commands, subagents, MCP servers, hooks, and permissions for every agent, in one list."
+                    symbolName: "text.document",
+                    title: "Context and Tools",
+                    detail: "CLAUDE.md and AGENTS.md files, rules, slash commands, subagents, MCP servers, and hooks for every agent. Share one across agents with a link."
                 ),
                 FeatureHighlight(
-                    symbolName: "trophy",
+                    symbolName: "key",
+                    title: "Secrets",
+                    detail: "Move API keys out of ~/.zshenv and into your Keychain. Shells and MCP servers get them only after macOS asks."
+                ),
+                FeatureHighlight(
+                    symbolName: "safari",
                     title: "Discover",
-                    detail: "Browse the skills.sh Top, Trending, and Hot lists, search every skill, and read its SKILL.md and security audits."
-                ),
-
-                FeatureHighlight(
-                    symbolName: "square.and.pencil",
-                    title: "Write Skills",
-                    detail: "Edit any SKILL.md with a live preview and format checks (⌘E), or start a new one from a template (⌘N)."
+                    detail: "Browse skills.sh and install a skill for every project or just one."
                 ),
             ]
         ),

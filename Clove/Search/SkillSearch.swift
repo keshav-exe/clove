@@ -86,7 +86,7 @@ enum SkillSearch {
 
     static func mergedTags(for skill: Skill, userTags: [String: [String]]) -> [String] {
         var seen: [String] = []
-        let combined = skill.frontmatterTags + (userTags[skill.id] ?? [])
+        let combined = skill.frontmatterTags + (userTags[skill.tagKey] ?? [])
         for tag in combined {
             let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }

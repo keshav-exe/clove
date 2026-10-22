@@ -7,4 +7,11 @@ struct PendingInstall: Identifiable, Hashable, Sendable {
     /// Folder of SKILL.md inside the repository, when already known.
     let folderHint: String?
     let targets: Set<AgentTarget>
+    /// A project folder to install into, or nil for everywhere.
+    var project: URL?
+
+    /// "Everywhere", or the project's folder name.
+    var scopeTitle: String {
+        project?.lastPathComponent ?? "Everywhere"
+    }
 }

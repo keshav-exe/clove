@@ -13,10 +13,8 @@ struct ResourceEmptyView: View {
         } else if !query.isEmpty {
             ContentUnavailableView.search(text: query)
         } else {
-            ContentUnavailableView {
-                Label("No \(kind.title)", systemImage: kind.symbolName)
-            } description: {
-                Text(kind.explanation + " " + whereToFind)
+            CalmEmptyState(title: "No \(kind.title.lowercased()) yet", message: kind.explanation + " " + whereToFind) {
+                ResourceArt(kind: kind)
             }
         }
     }

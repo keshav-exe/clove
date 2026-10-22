@@ -98,6 +98,63 @@ final class CleanupStore {
         lastResult = nil
     }
 
+    // MARK: - Leftovers
+
+    private(set) var leftovers: Loadable<[LeftoverItem]> = .idle
+    /// Leftovers the person chose to keep. Outdated ones start selected.
+    var keptLeftovers: Set<LeftoverItem.ID> = []
+    /// Up-to-date items the person chose to remove anyway.
+    var addedLeftovers: Set<LeftoverItem.ID> = []
+    private(set) var leftoverResult: HistoryResult?
+    private(set) var isRemovingLeftovers = false
+
+    func scanLeftovers() async {
+        if leftovers.value == nil {
+            leftovers = .loading
+        }
+        leftovers = .loaded(await LeftoverScanner.scan())
+    }
+
+    func isSelected(_ item: LeftoverItem) -> Bool {
+        item.isOutdated ? !keptLeftovers.contains(item.id) : addedLeftovers.contains(item.id)
+    }
+
+    func toggle(_ item: LeftoverItem) {
+        if item.isOutdated {
+            if keptLeftovers.remove(item.id) == nil { keptLeftovers.insert(item.id) }
+        } else {
+            if addedLeftovers.remove(item.id) == nil { addedLeftovers.insert(item.id) }
+        }
+    }
+
+    var selectedLeftovers: [LeftoverItem] {
+        (leftovers.value ?? []).filter(isSelected)
+    }
+
+    func removeLeftovers() async {
+        let chosen = selectedLeftovers
+        guard !chosen.isEmpty, !isRemovingLeftovers else { return }
+        isRemovingLeftovers = true
+        defer { isRemovingLeftovers = false }
+
+        let receipt = await LeftoverScanner.trash(chosen)
+        leftoverResult = HistoryResult(
+            count: receipt.moves.count,
+            bytes: Int(chosen.reduce(0) { $0 + $1.bytes }),
+            receipt: receipt
+        )
+        keptLeftovers = []
+        addedLeftovers = []
+        await scanLeftovers()
+    }
+
+    func undoLeftovers() async {
+        guard let result = leftoverResult else { return }
+        leftoverResult = nil
+        await Self.restore(result.receipt)
+        await scanLeftovers()
+    }
+
     // MARK: - History
 
     struct HistoryResult: Sendable {

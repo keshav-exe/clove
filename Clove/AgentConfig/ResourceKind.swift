@@ -12,11 +12,15 @@ enum ResourceKind: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
 
     var id: String { rawValue }
 
+    /// What shapes what an agent knows, and what shapes what it can do.
+    static let contextKinds: [ResourceKind] = [.instructions, .rules, .commands, .subagents]
+    static let toolKinds: [ResourceKind] = [.mcpServers, .hooks, .permissions]
+
     var title: String {
         switch self {
         case .instructions: "Instructions"
         case .rules: "Rules"
-        case .commands: "Commands"
+        case .commands: "Slash Commands"
         case .subagents: "Subagents"
         case .mcpServers: "MCP Servers"
         case .hooks: "Hooks"
@@ -24,11 +28,24 @@ enum ResourceKind: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
         }
     }
 
+    /// Short enough to fit under the window title.
+    var subtitle: String {
+        switch self {
+        case .instructions: "CLAUDE.md, AGENTS.md, and GEMINI.md"
+        case .rules: "Cursor, Windsurf, and Copilot rules"
+        case .commands: "Saved prompts you run with /"
+        case .subagents: "Specialists your agent hands work to"
+        case .mcpServers: "Extra tools your agents can call"
+        case .hooks: "Scripts that run on agent events"
+        case .permissions: "What runs without asking you"
+        }
+    }
+
     var singular: String {
         switch self {
         case .instructions: "instruction file"
         case .rules: "rule"
-        case .commands: "command"
+        case .commands: "slash command"
         case .subagents: "subagent"
         case .mcpServers: "MCP server"
         case .hooks: "hook"
@@ -43,28 +60,28 @@ enum ResourceKind: String, CaseIterable, Identifiable, Hashable, Sendable, Codab
         case .commands: "slash.circle"
         case .subagents: "person.2"
         case .mcpServers: "server.rack"
-        case .hooks: "bolt.horizontal"
+        case .hooks: "bolt"
         case .permissions: "checkmark.shield"
         }
     }
 
-    /// One line on what this kind is, for empty states and headers.
+    /// What this is and an example, for empty states.
     var explanation: String {
         switch self {
         case .instructions:
-            "CLAUDE.md, AGENTS.md, and GEMINI.md files. Agents read them at the start of every session."
+            "Notes your agents read at the start of every session, like how to run tests or which patterns to follow."
         case .rules:
-            "Cursor and Windsurf rules: guidance applied always, by file pattern, or when relevant."
+            "Guidance an agent follows always, for certain files, or when it decides the rule is relevant."
         case .commands:
-            "Saved prompts you run with a slash, like /review."
+            "Prompts you save once and run with a slash, like /review or /release-notes."
         case .subagents:
-            "Specialist agents the main agent can hand work to."
+            "Focused agents the main agent can hand a task to, like a code reviewer or a test writer."
         case .mcpServers:
-            "Tools and data sources agents connect to over the Model Context Protocol."
+            "Servers that give agents extra tools, like a browser, Figma, GitHub, or your database."
         case .hooks:
-            "Shell commands agents run automatically before or after their own actions."
+            "Commands that run on their own before or after an agent acts, like formatting a file after every edit."
         case .permissions:
-            "Commands and tools agents may run without asking first."
+            "Commands and tools an agent may run without stopping to ask you first."
         }
     }
 

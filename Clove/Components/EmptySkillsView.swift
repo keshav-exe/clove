@@ -7,14 +7,11 @@ struct EmptySkillsView: View {
     var body: some View {
         switch mode {
         case .noSkills:
-            ContentUnavailableView {
-                Label("No Skills Found", systemImage: "command")
-            } description: {
-                Text("Clove looks in your Cursor, Claude, Codex, and Agents folders, plus any project folders you add.")
-            } actions: {
-                if let onRefresh {
-                    Button("Refresh", systemImage: "arrow.clockwise", action: onRefresh)
-                }
+            CalmEmptyState(
+                title: "No skills yet",
+                message: "Skills you install in Claude Code, Cursor, Codex, or a project show up here on their own. Find some in Discover, or start one with ⌘N."
+            ) {
+                SkillsArt()
             }
         case .noResults(let query):
             ContentUnavailableView.search(text: query)

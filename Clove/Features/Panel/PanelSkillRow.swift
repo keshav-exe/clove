@@ -36,7 +36,7 @@ struct PanelSkillRow: View {
         .contentShape(.rect)
         .onTapGesture(perform: handleTap)
         .skillDraggable(skill)
-        .help("\(entry.reference) — Return inserts into the prompt you came from")
+        .help("\(entry.reference). Return types it into the prompt you came from.")
         .contextMenu {
             SkillActionButtons(skill: skill)
         }

@@ -10,7 +10,7 @@ struct GeneralSettingsPane: View {
 
         SettingsForm {
             SettingsSection(
-                footer: "Closing the library keeps Clove in the menu bar. Hide Dock icon only applies while the library is closed — opening it brings Clove to the menu bar so Settings and shortcuts are available."
+                footer: "Closing the library keeps Clove in the menu bar. The Dock icon hides only while the library is closed, so Settings and shortcuts stay reachable when it's open."
             ) {
                 VStack(alignment: .leading, spacing: 0) {
                     SettingsCheckboxRow(title: "Launch at login", isOn: $launch.isEnabled)

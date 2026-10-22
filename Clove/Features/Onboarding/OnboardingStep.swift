@@ -35,7 +35,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .welcome:
-            "Every agent skill installed on your Mac, in one searchable place."
+            "Your skills, your agents' setup, and what they leave behind, in one place."
         case .privacy:
             "Clove reads local files only. Nothing is uploaded or synced."
         case .permissions:

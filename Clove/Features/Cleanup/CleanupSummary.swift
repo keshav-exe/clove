@@ -28,6 +28,7 @@ struct CleanupSummary: View {
                         )
                     }
 
+                    CleanupLeftoversCard()
                     CleanupHistoryCard()
                 }
             } else {
@@ -36,7 +37,6 @@ struct CleanupSummary: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 460)
         .animation(.smooth(duration: 0.25), value: cleanup.lastResult == nil)
     }
 

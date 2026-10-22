@@ -4,6 +4,7 @@ struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
     @Environment(UpdateService.self) private var updates
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var offeredUpdate: UpdateManifest?
@@ -22,6 +23,9 @@ struct LibraryRootView: View {
             .onAppear {
                 WindowBridge.shared.openLibraryWindow = {
                     openWindow(id: CloveWindowID.library)
+                }
+                WindowBridge.shared.openSettingsAction = {
+                    openSettings()
                 }
                 LibraryWindowTracker.shared.registerOpenWindow {
                     openWindow(id: CloveWindowID.library)
@@ -52,32 +56,62 @@ struct LibraryRootView: View {
             }
     }
 
-    private var librarySplit: some View {
-        NavigationSplitView {
-            LibrarySidebar()
-        } content: {
-            switch model.section {
-            case .discover:
-                DiscoverList()
-            case .library:
-                LibraryList()
-            case .cleanup:
-                CleanupList()
-            case .resources(let kind):
-                ResourceList(kind: kind)
+    /// Home is one wide page; everything else is a list and its detail.
+    @ViewBuilder
+    private var columns: some View {
+        if model.section == .home {
+            NavigationSplitView {
+                LibrarySidebar()
+            } detail: {
+                HomeView()
             }
-        } detail: {
-            switch model.section {
-            case .discover:
-                DiscoverDetail()
-            case .library:
-                LibraryDetail()
-            case .cleanup:
-                CleanupSummary()
-            case .resources:
-                ResourceDetailColumn()
+        } else {
+            NavigationSplitView {
+                LibrarySidebar()
+            } content: {
+                // Widths live on the column, not on each list: set inside a
+                // switch they were ignored and the column stayed narrow.
+                Group {
+                    switch model.section {
+                    case .home, .library:
+                        LibraryList()
+                    case .discover:
+                        DiscoverList()
+                    case .cleanup:
+                        CleanupList()
+                    case .resources(let kind):
+                        ResourceList(kind: kind)
+                    case .secrets:
+                        SecretsList()
+                    case .running:
+                        RunningList()
+                    }
+                }
+                .navigationSplitViewColumnWidth(min: Metrics.listMinWidth, ideal: Metrics.listIdealWidth, max: 480)
+            } detail: {
+                Group {
+                    switch model.section {
+                    case .home, .library:
+                        LibraryDetail()
+                    case .discover:
+                        DiscoverDetail()
+                    case .cleanup:
+                        CleanupSummary()
+                    case .resources:
+                        ResourceDetailColumn()
+                    case .secrets:
+                        SecretDetail()
+                    case .running:
+                        RunningDetail()
+                    }
+                }
+                .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 560)
             }
         }
+    }
+
+    private var librarySplit: some View {
+        columns
         .navigationTitle("Clove")
         .navigationSubtitle(subtitle)
         .alert(
@@ -133,9 +167,12 @@ struct LibraryRootView: View {
             return "Scanning"
         }
         switch model.section {
-        case .discover: return "skills.sh"
-        case .cleanup: return "Unused skills, commands, and history"
-        case .resources(let kind): return kind.explanation
+        case .home: return "Everything your agents load"
+        case .running: return "Live agents and servers"
+        case .discover: return "Skills from skills.sh"
+        case .cleanup: return "Free up context and disk space"
+        case .resources(let kind): return kind.subtitle
+        case .secrets: return "API keys, kept in your Keychain"
         case .library: break
         }
         guard model.didScan else { return "" }

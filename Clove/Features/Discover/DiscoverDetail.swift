@@ -9,13 +9,13 @@ struct DiscoverDetail: View {
                 MarketplaceSkillView(skill: skill)
                     .id(skill.id)
             } else {
-                ContentUnavailableView(
-                    "Pick a Skill",
-                    systemImage: "square.and.arrow.down",
-                    description: Text("Read its SKILL.md, check its security audits, and install it into your agents.")
-                )
+                CalmEmptyState(
+                    title: "Pick a skill to read",
+                    message: "You'll see its SKILL.md, its security audits, and how many people use it. Installing takes one click."
+                ) {
+                    DiscoverArt()
+                }
             }
         }
-        .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 460)
     }
 }

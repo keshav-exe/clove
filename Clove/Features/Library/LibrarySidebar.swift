@@ -2,59 +2,79 @@ import SwiftUI
 
 struct LibrarySidebar: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     @State private var isCreatingGroup = false
     @State private var newGroupName = ""
+    // Collapsed sections stay collapsed across launches.
+    @AppStorage("sidebar.skills") private var showsSkills = true
+    @AppStorage("sidebar.locations") private var showsLocations = false
+    @AppStorage("sidebar.groups") private var showsGroups = true
+    @AppStorage("sidebar.context") private var showsContext = true
+    @AppStorage("sidebar.tools") private var showsTools = true
 
     var body: some View {
         @Bindable var model = model
 
         List(selection: $model.sidebarSelection) {
-            Section("Discover") {
-                ForEach(DiscoverFeed.allCases) { feed in
-                    Label(feed.title, systemImage: feed.symbolName)
-                        .tag(SidebarItem.discover(feed))
-                }
-            }
-
-            Section("Library") {
-                LibrarySidebarRow(filter: .all, tint: .primary)
+            // Places that span everything, without a header.
+            Section {
+                Label("Home", systemImage: "house")
+                    .tag(SidebarItem.home)
+                RunningSidebarRow()
                 CleanupSidebarRow()
             }
 
-            Section("Agent Setup") {
-                ForEach(ResourceKind.allCases) { kind in
+            Section("Skills", isExpanded: $showsSkills) {
+                LibrarySidebarRow(filter: .all, tint: .accentColor)
+                Label("Discover", systemImage: "safari")
+                    .tag(SidebarItem.discover)
+
+                if !model.availableSources.isEmpty {
+                    DisclosureGroup(isExpanded: $showsLocations) {
+                        ForEach(model.availableSources, id: \.self) { source in
+                            LibrarySidebarRow(filter: .source(source), tint: source.tint)
+                        }
+                    } label: {
+                        Label("By Location", systemImage: "folder")
+                    }
+                }
+
+                DisclosureGroup(isExpanded: $showsGroups) {
+                    if model.allGroups.isEmpty {
+                        Text("Group skills to copy them together")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(model.allGroups, id: \.self) { group in
+                            LibrarySidebarRow(filter: .tag(group), tint: .teal)
+                                .contextMenu {
+                                    LibraryGroupMenu(group: group)
+                                }
+                        }
+                    }
+                } label: {
+                    Label("Groups", systemImage: "square.stack")
+                }
+            }
+
+            Section("Context", isExpanded: $showsContext) {
+                ForEach(ResourceKind.contextKinds) { kind in
                     ResourceSidebarRow(kind: kind)
                 }
             }
 
-            if !model.availableSources.isEmpty {
-                Section("Sources") {
-                    ForEach(model.availableSources, id: \.self) { source in
-                        LibrarySidebarRow(filter: .source(source), tint: source.tint)
-                    }
+            Section("Tools & Access", isExpanded: $showsTools) {
+                ForEach(ResourceKind.toolKinds) { kind in
+                    ResourceSidebarRow(kind: kind)
                 }
-            }
-
-            Section("Groups") {
-                if model.allGroups.isEmpty {
-                    Text("No groups yet")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(model.allGroups, id: \.self) { group in
-                        LibrarySidebarRow(filter: .tag(group), tint: .teal)
-                            .contextMenu {
-                                LibraryGroupMenu(group: group)
-                            }
-                    }
-                }
+                SecretsSidebarRow()
             }
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(
             min: Metrics.sidebarMinWidth,
             ideal: Metrics.sidebarIdealWidth,
-            max: 280
+            max: 300
         )
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -65,13 +85,22 @@ struct LibrarySidebar: View {
                 }
                 .help("Create a skill or group")
             }
-
-            ToolbarItem {
-                Button("Settings", systemImage: "gearshape") {
-                    WindowBridge.shared.showSettings()
-                }
-                .help("Open Clove settings")
+        }
+        // At the foot of the sidebar, like Claude and Mail: the toolbar above
+        // a narrow sidebar pushed it into the overflow menu.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button(action: { openSettings() }) {
+                Label("Settings", systemImage: "gearshape")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Metrics.spacingM)
+                    .padding(.vertical, Metrics.spacingS)
+                    .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Open Clove settings (⌘,)")
+            .padding(.horizontal, Metrics.spacingS)
+            .padding(.bottom, Metrics.spacingS)
         }
         .alert("New Group", isPresented: $isCreatingGroup) {
             TextField("Group name", text: $newGroupName)

@@ -10,12 +10,20 @@ struct SkillInstallRow: View {
                 Text(skill.source.sectionTitle)
                     .font(.body)
 
-                Text(skill.resolvedPath)
+                Text(Self.abbreviated(skill.originalURL.deletingLastPathComponent()))
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .lineLimit(2)
                     .truncationMode(.middle)
+
+                if skill.isSymlink {
+                    Label("Linked to \(Self.abbreviated(skill.fileURL.deletingLastPathComponent()))", systemImage: "link")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -32,6 +40,10 @@ struct SkillInstallRow: View {
                 .help("Open in Default Editor")
         }
         .padding(.vertical, 5)
+    }
+
+    static func abbreviated(_ url: URL) -> String {
+        url.path(percentEncoded: false).replacing(URL.homeDirectory.path(percentEncoded: false), with: "~/")
     }
 
     private func reveal() {

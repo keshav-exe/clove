@@ -22,12 +22,21 @@ struct DiscoverList: View {
             }
         }
         .listStyle(.inset)
-        .navigationSplitViewColumnWidth(
-            min: Metrics.listMinWidth,
-            ideal: Metrics.listIdealWidth + 40,
-            max: 460
-        )
-        .navigationTitle(store.isSearching ? "Search" : store.feed.title)
+        .navigationTitle("Discover")
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !store.isSearching {
+                Picker("List", selection: $store.feed) {
+                    ForEach(DiscoverFeed.allCases) { feed in
+                        Text(feed.title).tag(feed)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .help(store.feed.subtitle)
+                .padding(.horizontal, Metrics.spacingL)
+                .padding(.vertical, Metrics.spacingS)
+            }
+        }
         .searchable(text: $store.query, prompt: "Search skills.sh")
         .overlay {
             DiscoverListStatus(state: store.visible, query: store.query, retry: reload)

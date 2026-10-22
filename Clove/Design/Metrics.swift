@@ -9,13 +9,15 @@ enum Metrics {
     static let panelMinHeight: Double = 260
     static let panelMaxHeight: Double = 560
 
-    static let windowMinWidth: Double = 880
-    static let windowMinHeight: Double = 540
-    static let sidebarMinWidth: Double = 188
-    static let sidebarIdealWidth: Double = 212
-    static let listMinWidth: Double = 260
-    static let listIdealWidth: Double = 300
-    static let detailMinWidth: Double = 300
+    static let windowMinWidth: Double = 960
+    static let windowMinHeight: Double = 560
+    static let sidebarMinWidth: Double = 200
+    static let sidebarIdealWidth: Double = 224
+    /// Wide enough for a skill name, two lines of description, and badges
+    /// without truncating the common case.
+    static let listMinWidth: Double = 300
+    static let listIdealWidth: Double = 340
+    static let detailMinWidth: Double = 380
 
     static let settingsWidth: Double = 580
     static let settingsHeight: Double = 520

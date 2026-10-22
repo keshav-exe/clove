@@ -1,7 +1,12 @@
 import Foundation
 
 struct Skill: Identifiable, Hashable, Sendable {
-    var id: String { resolvedPath }
+    /// Where it was found. A skill linked into two agents is two locations
+    /// of one file, so each gets its own identity.
+    var id: String { originalURL.path(percentEncoded: false) }
+
+    /// Groups follow the real file, so a linked skill keeps its groups everywhere.
+    var tagKey: String { resolvedPath }
 
     let name: String
     let summary: String

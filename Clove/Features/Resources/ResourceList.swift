@@ -8,12 +8,23 @@ struct ResourceList: View {
     var body: some View {
         @Bindable var model = model
         let resources = model.filteredResources(of: kind)
-        let groups = Dictionary(grouping: resources, by: \.scope).sorted { $0.key < $1.key }
+        let global = resources.filter(\.scope.isGlobal)
+        let inProjects = resources.filter { !$0.scope.isGlobal }
 
+        // Two groups, not one per project: a section per repo made a dozen
+        // one-row headers that buried the names people scan for.
         List(selection: $model.resourceSelection) {
-            ForEach(groups, id: \.key) { scope, items in
-                Section(scope.title) {
-                    ForEach(items) { resource in
+            if !global.isEmpty {
+                Section("Everywhere") {
+                    ForEach(global) { resource in
+                        ResourceRow(resource: resource)
+                            .tag(resource.id)
+                    }
+                }
+            }
+            if !inProjects.isEmpty {
+                Section("In Projects") {
+                    ForEach(inProjects) { resource in
                         ResourceRow(resource: resource)
                             .tag(resource.id)
                     }
@@ -21,11 +32,6 @@ struct ResourceList: View {
             }
         }
         .listStyle(.inset)
-        .navigationSplitViewColumnWidth(
-            min: Metrics.listMinWidth,
-            ideal: Metrics.listIdealWidth + 40,
-            max: 460
-        )
         .navigationTitle(kind.title)
         .searchable(text: $model.resourceQuery, prompt: "Search \(kind.title.lowercased())")
         .overlay {
@@ -34,6 +40,11 @@ struct ResourceList: View {
             }
         }
         .toolbar {
+            if kind == .instructions {
+                ToolbarItem {
+                    NewInstructionsMenu()
+                }
+            }
             ToolbarItem {
                 Button("Refresh", systemImage: "arrow.clockwise", action: refresh)
                     .disabled(model.isScanning)

@@ -29,6 +29,11 @@ enum MarkdownResourceParser {
                 details.append(ResourceDetail(label: "Files", value: globs, isCode: true))
             }
         }
+        let linkTarget = url.resolvingSymlinksInPath()
+        if linkTarget.path(percentEncoded: false) != url.standardizedFileURL.path(percentEncoded: false) {
+            let shown = linkTarget.path(percentEncoded: false).replacing(URL.homeDirectory.path(percentEncoded: false), with: "~/")
+            details.append(ResourceDetail(label: "Linked to", value: shown, isCode: true))
+        }
         if let model = fields["model"] {
             details.append(ResourceDetail(label: "Model", value: model))
         }

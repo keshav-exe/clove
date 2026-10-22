@@ -8,13 +8,13 @@ struct LibraryDetail: View {
             if let entry = model.librarySelectedEntry {
                 SkillDetailView(entry: entry)
             } else {
-                ContentUnavailableView(
-                    "No Skill Selected",
-                    systemImage: "sidebar.squares.left",
-                    description: Text("Pick a skill to read its description, groups, and file location.")
-                )
+                CalmEmptyState(
+                    title: "Pick a skill",
+                    message: "Its description, groups, and every place it's installed show up here. Return copies its reference."
+                ) {
+                    SkillsArt()
+                }
             }
         }
-        .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 400)
     }
 }

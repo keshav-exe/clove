@@ -16,7 +16,7 @@ enum LibraryFilter: Hashable, Sendable {
     var symbolName: String {
         switch self {
         case .all: "square.stack.3d.up"
-        case .source: SkillSource.listIcon
+        case .source(let source): source.symbolName
         case .tag: "folder"
         }
     }

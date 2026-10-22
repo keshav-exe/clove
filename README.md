@@ -1,6 +1,6 @@
 # Clove
 
-Native Mac app for everything your AI agents load: skills, instruction files, rules, commands, subagents, MCP servers, hooks, and permissions. Find new skills on [skills.sh](https://skills.sh), see what each agent is set up with, and clean out what you don't use.
+Native Mac app for everything your AI agents load: skills, instruction files, rules, commands, subagents, MCP servers, hooks, permissions, and the API keys they need. Find new skills on [skills.sh](https://skills.sh), see what each agent is set up with, and clean out what you don't use.
 
 **Free and open source.** MIT license. No account. No paywall.
 
@@ -14,7 +14,7 @@ Skills live in `~/.cursor`, `~/.claude`, plugins, and project folders. Referenci
 
 **Library**
 
-- Scans every `SKILL.md` on your Mac: Cursor, Claude, Codex, Agents, plugins, and projects
+- Scans every `SKILL.md` on your Mac: Claude Code, Cursor, Codex, the shared `~/.agents` folder, plugins, and projects, including skills linked in from a dotfiles repo
 - Search names, descriptions, and groups
 - Copy prompt-ready references like `/animations` or `@nextjs`, not file paths
 - Pin a floating panel beside your editor (`⌘⇧K`), or drag a skill straight into a prompt
@@ -24,16 +24,23 @@ Skills live in `~/.cursor`, `~/.claude`, plugins, and project folders. Referenci
 
 - Browse the skills.sh Top, Trending, and Hot lists, or search all of them
 - Read a skill's SKILL.md, highlights, and security audits before installing
-- Install in one click. Clove puts one copy in `~/.agents/skills` and links it into the agents you pick, the same layout as `npx skills add`
+- Install in one click, for every project or just one. Clove puts one copy in `.agents/skills` and links it into the agents you pick, the same layout as `npx skills add`
 
-**Agent Setup**
+**Context and tools**
 
 - Instruction files: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and Copilot instructions, globally and in each project, with what each costs in context
+- Point several agents at one instruction file: Clove links `CLAUDE.md` to a project's `AGENTS.md` so you edit one file
 - Cursor rules (`.cursor/rules/*.mdc`, `.cursorrules`), Windsurf rules, and Copilot instruction files, with when each applies
-- Commands and subagents for Claude Code, Cursor, and Codex
-- MCP servers from Claude Code, Cursor, Codex, Gemini, Claude Desktop, and Windsurf. Environment variables and headers show names only, never values
+- Slash commands and subagents for Claude Code, Cursor, and Codex. Share one with another agent and Clove links it, so edits reach both
+- MCP servers from Claude Code, Cursor, Codex, Gemini, Claude Desktop, and Windsurf. Add one to Cursor in a click, or copy the command that adds it to Claude Code or Codex. Environment variables and headers show names only
 - Hooks from Claude Code settings, Cursor's `hooks.json`, and Codex `notify`, with a warning when a hook's script is missing
 - Claude Code permission rules per project
+
+**Secrets**
+
+- Keep API keys in your login Keychain instead of `~/.zshenv`
+- Clove finds keys exported in plain text from your shell profiles and moves them, rewriting each line to read from the Keychain
+- Copy a shell line or an MCP-safe command for any key. macOS asks before handing it to anything but Clove
 
 **Clean up**
 

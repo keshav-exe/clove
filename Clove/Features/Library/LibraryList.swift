@@ -13,11 +13,6 @@ struct LibraryList: View {
             }
         }
         .listStyle(.inset)
-        .navigationSplitViewColumnWidth(
-            min: Metrics.listMinWidth,
-            ideal: Metrics.listIdealWidth,
-            max: 420
-        )
         .navigationTitle(model.libraryFilter.title)
         .searchable(text: $model.libraryQuery, prompt: "Search name, description, groups")
         .overlay {

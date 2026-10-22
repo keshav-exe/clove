@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// One code icon everywhere, tinted by source.
 extension SkillSource {
-    static let listIcon = "chevron.left.forwardslash.chevron.right"
-
+    /// Agent folders read as folders; plugins and projects get their own shape
+    /// so the Locations list scans by icon as well as name.
     var symbolName: String {
-        Self.listIcon
+        switch self {
+        case .cursor, .claude, .agents, .codex, .other: "folder"
+        case .cursorBuiltin: "shippingbox"
+        case .plugin: "puzzlepiece.extension"
+        case .project: "hammer"
+        }
     }
 
     var tint: Color {

@@ -21,7 +21,7 @@ actor SkillScanner {
 
             for await skill in group {
                 guard let skill else { continue }
-                unique[skill.resolvedPath] = skill
+                unique[skill.id] = skill
             }
         }
 
@@ -100,45 +100,64 @@ actor SkillScanner {
             return fileManager.fileExists(atPath: direct.path(percentEncoded: false)) ? [direct] : []
         }
 
-        guard let enumerator = fileManager.enumerator(
-            at: root,
-            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
-            options: [.skipsPackageDescendants]
-        ) else {
-            return []
-        }
-
-        let skipped = ["node_modules", ".git", "DerivedData", ".build", "Pods", "vendor", ".next", "dist"]
         var files: [URL] = []
-
-        while let item = enumerator.nextObject() as? URL {
-            let name = item.lastPathComponent
-            if skipped.contains(name) {
-                enumerator.skipDescendants()
-                continue
-            }
-            if name == ".system" {
-                enumerator.skipDescendants()
-                continue
-            }
-            guard name == "SKILL.md" else { continue }
-            files.append(item)
-        }
-
+        var visited: Set<String> = []
+        walk(root, depth: 0, visited: &visited, into: &files)
         return files
     }
 
+    private static let skippedFolders: Set<String> = [
+        "node_modules", ".git", "DerivedData", ".build", "Pods", "vendor", ".next", "dist", ".system",
+    ]
+
+    /// Walks a skills folder, following symlinked folders. FileManager's
+    /// enumerator doesn't descend into them, and linking skills in from a
+    /// dotfiles repo or `~/.agents/skills` is how most people share them.
+    /// Paths stay as discovered, so a linked skill belongs to the folder it
+    /// was linked into. Resolved paths are remembered to stop link cycles.
+    private func walk(_ folder: URL, depth: Int, visited: inout Set<String>, into files: inout [URL]) {
+        guard depth <= 10 else { return }
+        let resolved = folder.resolvingSymlinksInPath().path(percentEncoded: false)
+        guard visited.insert(resolved).inserted else { return }
+        // Listing a link to a folder fails with "Not a directory", so list the
+        // target but build child paths from the folder as discovered.
+        guard let names = try? fileManager.contentsOfDirectory(atPath: resolved) else { return }
+
+        for name in names {
+            let child = folder.appending(path: name)
+            if name == "SKILL.md" {
+                files.append(child)
+                continue
+            }
+            guard !Self.skippedFolders.contains(name) else { continue }
+
+            // fileExists follows links, so a linked folder counts as a folder.
+            var isDirectory: ObjCBool = false
+            guard
+                fileManager.fileExists(atPath: child.path(percentEncoded: false), isDirectory: &isDirectory),
+                isDirectory.boolValue,
+                (try? child.resolvingSymlinksInPath().resourceValues(forKeys: [.isPackageKey]).isPackage) != true
+            else { continue }
+            walk(child, depth: depth + 1, visited: &visited, into: &files)
+        }
+    }
+
     nonisolated static func loadSkill(at url: URL, home: URL) -> Skill? {
-        let isSymlink = (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true
         let resolved = url.resolvingSymlinksInPath()
+        // Linked if SKILL.md or any folder on the way to it is a link.
+        let isSymlink = url.standardizedFileURL.path(percentEncoded: false)
+            != resolved.path(percentEncoded: false)
         guard let contents = try? String(contentsOf: resolved, encoding: .utf8) else {
             return nil
         }
 
         let (matter, _) = SkillFrontmatterParser.parse(contents)
-        let directoryName = resolved.deletingLastPathComponent().lastPathComponent
+        let directoryName = url.deletingLastPathComponent().lastPathComponent
         let path = resolved.path(percentEncoded: false)
-        let source = SkillSource.classify(path: path, home: home.path(percentEncoded: false))
+        // Classify by where it was found: a skill linked into ~/.claude/skills
+        // is a Claude skill wherever its files live.
+        let discovered = url.path(percentEncoded: false)
+        let source = SkillSource.classify(path: discovered, home: home.path(percentEncoded: false))
         let modifiedAt = (try? resolved.resourceValues(forKeys: [.contentModificationDateKey]))
             .flatMap(\.contentModificationDate) ?? .now
 
@@ -150,7 +169,7 @@ actor SkillScanner {
             resolvedPath: path,
             directoryName: directoryName,
             source: source,
-            sourceDetail: SkillSource.detail(path: path, source: source),
+            sourceDetail: SkillSource.detail(path: discovered, source: source),
             frontmatterTags: matter.tags,
             modifiedAt: modifiedAt,
             isSymlink: isSymlink,

@@ -16,7 +16,7 @@ struct ScanRoot: Identifiable, Hashable, Sendable {
             ("Cursor", ".cursor/skills"),
             ("Cursor built-in", ".cursor/skills-cursor"),
             ("Cursor plugins", ".cursor/plugins/cache"),
-            ("Claude", ".claude/skills"),
+            ("Claude Code", ".claude/skills"),
             ("Agents", ".agents/skills"),
             ("Codex", ".codex/skills"),
         ]

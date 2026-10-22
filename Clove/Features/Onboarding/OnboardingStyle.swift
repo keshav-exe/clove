@@ -2,20 +2,14 @@ import SwiftUI
 
 enum OnboardingStyle {
     static let width: Double = 680
-    static let height: Double = 624
+    static let height: Double = 688
 
-    static let heroHeight: Double = 148
+    static let heroHeight: Double = 212
     static let contentWidth: Double = 460
     static let horizontalPadding: Double = 44
 
-    static let brand = Color(red: 0.0, green: 0.87, blue: 0.75)
-    static let brandDeep = Color(red: 0.13, green: 0.45, blue: 0.95)
-
-    static let heroGradient = LinearGradient(
-        colors: [brand, Color(red: 0.16, green: 0.72, blue: 0.90), brandDeep],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    /// The calm accent: one color for every tile and highlight in setup.
+    static let brandDeep = Palette.accent
 }
 
 /// Tinted glyph tile used by every onboarding row. One tint keeps the flow cohesive.

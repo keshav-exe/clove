@@ -64,6 +64,17 @@ struct SkillDetailView: View {
                     Button("Reveal in Finder", systemImage: "folder", action: reveal)
                     Button("Open in Default Editor", systemImage: "doc.text", action: open)
                     Button("Copy Name", systemImage: "textformat", action: copyName)
+                    Divider()
+                    Menu("Add to Project", systemImage: "folder.badge.plus") {
+                        ForEach(model.projects.prefix(20), id: \.self) { project in
+                            Button(project.lastPathComponent) {
+                                addToProject(project)
+                            }
+                        }
+                        Divider()
+                        Button("Choose Folder…", action: chooseProject)
+                    }
+                    .help("Copy this skill into a project so it ships with the repo")
                     if isRemovable {
                         Divider()
                         Button("Move to Trash…", systemImage: "trash", role: .destructive) {
@@ -108,6 +119,16 @@ struct SkillDetailView: View {
 
     private func copyName() {
         model.copyName(skill)
+    }
+
+    private func addToProject(_ project: URL) {
+        Task { await model.manager.addToProject(entry, project: project, targets: model.manager.defaultTargets) }
+    }
+
+    private func chooseProject() {
+        if let project = FolderPicker.chooseProject() {
+            addToProject(project)
+        }
     }
 
     private func remove() {

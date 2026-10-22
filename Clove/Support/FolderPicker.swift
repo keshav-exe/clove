@@ -4,6 +4,19 @@ import AppKit
 enum FolderPicker {
     /// Asks for a folder to scan. macOS grants read access to whatever the user
     /// picks here, which is why Clove never asks for blanket disk access.
+    /// Asks which project to put a skill in.
+    static func chooseProject() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose Project"
+        panel.message = "Clove puts the skill in this project's .agents/skills folder and links it for each agent."
+        panel.directoryURL = URL.homeDirectory.appending(path: "Developer")
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+    }
+
     static func chooseProjectFolder() -> URL? {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true

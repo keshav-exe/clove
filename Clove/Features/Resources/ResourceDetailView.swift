@@ -25,6 +25,17 @@ struct ResourceDetailView: View {
                     }
                 }
 
+                switch resource.kind {
+                case .commands, .subagents:
+                    ResourceShareSection(resource: resource)
+                case .mcpServers:
+                    MCPShareSection(resource: resource)
+                case .instructions:
+                    InstructionShareSection(resource: resource)
+                default:
+                    EmptyView()
+                }
+
                 if let document, !document.isEmpty {
                     SkillDetailSection(title: "Contents") {
                         MarkdownView(document: document)

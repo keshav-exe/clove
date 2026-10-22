@@ -11,11 +11,9 @@ struct CleanupListStatus: View {
             ProgressView("Reading agent history…")
                 .controlSize(.small)
         case .loaded where isEmpty:
-            ContentUnavailableView(
-                "No Unused Skills",
-                systemImage: "checkmark.circle",
-                description: Text("Nothing idle for \(window.phrase).")
-            )
+            CalmEmptyState(title: "Nothing to clean up", message: "Every skill and command was used in the last \(window.phrase).") {
+                SkillsArt()
+            }
         case .loaded, .failed:
             EmptyView()
         }

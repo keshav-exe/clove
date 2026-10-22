@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Apple-style welcome / what's new sheet used for onboarding and release notes.
-struct FeatureSheet<Content: View>: View {
+/// A hero, when given, replaces the emblem with a band of art across the top.
+struct FeatureSheet<Content: View, Hero: View>: View {
     var useAppIcon = false
     var symbolName: String?
     let title: String
@@ -14,12 +15,19 @@ struct FeatureSheet<Content: View>: View {
     var onBack: () -> Void = {}
     let onContinue: () -> Void
     @ViewBuilder let content: Content
+    @ViewBuilder var hero: Hero
+
+    private var hasHero: Bool { Hero.self != EmptyView.self }
 
     var body: some View {
         VStack(spacing: 0) {
+            hero
+
             VStack(spacing: 16) {
-                emblem
-                    .padding(.top, 28)
+                if !hasHero {
+                    emblem
+                        .padding(.top, 28)
+                }
 
                 VStack(spacing: 6) {
                     Text(title)
@@ -36,6 +44,7 @@ struct FeatureSheet<Content: View>: View {
                 .accessibilityElement(children: .combine)
             }
             .padding(.horizontal, 40)
+            .padding(.top, hasHero ? 22 : 0)
 
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -45,7 +54,10 @@ struct FeatureSheet<Content: View>: View {
 
             footer
         }
-        .frame(width: FeatureSheetMetrics.width, height: FeatureSheetMetrics.height)
+        .frame(
+            width: FeatureSheetMetrics.width,
+            height: FeatureSheetMetrics.height + (hasHero ? FeatureSheetMetrics.heroAllowance : 0)
+        )
         .background(.background)
     }
 
@@ -95,6 +107,38 @@ struct FeatureSheet<Content: View>: View {
 private enum FeatureSheetMetrics {
     static let width: Double = 520
     static let height: Double = 580
+    static let heroAllowance: Double = 100
+}
+
+extension FeatureSheet where Hero == EmptyView {
+    init(
+        useAppIcon: Bool = false,
+        symbolName: String? = nil,
+        title: String,
+        subtitle: String,
+        pageIndex: Int? = nil,
+        pageCount: Int? = nil,
+        continueTitle: String = "Continue",
+        showsBack: Bool = false,
+        onBack: @escaping () -> Void = {},
+        onContinue: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.init(
+            useAppIcon: useAppIcon,
+            symbolName: symbolName,
+            title: title,
+            subtitle: subtitle,
+            pageIndex: pageIndex,
+            pageCount: pageCount,
+            continueTitle: continueTitle,
+            showsBack: showsBack,
+            onBack: onBack,
+            onContinue: onContinue,
+            content: content,
+            hero: { EmptyView() }
+        )
+    }
 }
 
 private struct FeatureSheetPageIndicator: View {

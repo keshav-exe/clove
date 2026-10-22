@@ -8,8 +8,6 @@ struct OnboardingFlow: View {
 
     var body: some View {
         FeatureSheet(
-            useAppIcon: step == .welcome,
-            symbolName: step == .welcome ? nil : step.symbolName,
             title: step.title,
             subtitle: step.subtitle,
             pageIndex: step.rawValue,
@@ -22,6 +20,8 @@ struct OnboardingFlow: View {
             stepContent
                 .id(step)
                 .transition(stepTransition)
+        } hero: {
+            OnboardingHero(step: step)
         }
         .animation(Motion.selection(reduceMotion), value: step)
     }

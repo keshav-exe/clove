@@ -8,6 +8,8 @@ struct MarketplaceInstallBar: View {
     let folderHint: String?
 
     @State private var didCopyCommand = false
+    /// Nil installs everywhere; a folder installs into that project only.
+    @State private var project: URL?
 
     private var manager: SkillManager { model.manager }
 
@@ -16,20 +18,21 @@ struct MarketplaceInstallBar: View {
             HStack(spacing: Metrics.spacingS) {
                 if let phase = manager.phase(for: skill.skillId) {
                     MarketplaceInstallProgress(phase: phase)
-                } else if model.isInstalled(skill) {
-                    if manager.hasUpdate(skill.skillId) {
+                } else {
+                    if manager.hasUpdate(skill.skillId), project == nil {
                         Button("Update", systemImage: "arrow.down.circle", action: update)
                             .buttonStyle(.glassProminent)
+                    } else if model.isInstalled(skill), project == nil {
+                        Button("Show in Library", systemImage: "checkmark.circle.fill", action: showInLibrary)
+                            .buttonStyle(.glass)
+                    } else {
+                        Button(installTitle, systemImage: "arrow.down", action: install)
+                            .buttonStyle(.glassProminent)
+                            .disabled(!skill.isGitHub || manager.defaultTargets.isEmpty)
+                            .help(skill.isGitHub ? "Install for \(targetSummary)" : "Only skills hosted on GitHub install from Clove")
                     }
-                    Button("Show in Library", systemImage: "checkmark.circle.fill", action: showInLibrary)
-                        .buttonStyle(.glass)
-                } else {
-                    Button("Install", systemImage: "arrow.down", action: install)
-                        .buttonStyle(.glassProminent)
-                        .disabled(!skill.isGitHub || manager.defaultTargets.isEmpty)
-                        .help(skill.isGitHub ? "Install into \(targetSummary)" : "Only GitHub skills install from Clove")
 
-                    AgentTargetMenu(targets: targetsBinding)
+                    InstallOptionsMenu(targets: targetsBinding, project: $project)
                 }
 
                 Button(
@@ -68,8 +71,12 @@ struct MarketplaceInstallBar: View {
         }
     }
 
+    private var installTitle: String {
+        project.map { "Install in \($0.lastPathComponent)" } ?? "Install"
+    }
+
     private func install() {
-        let request = PendingInstall(skill: skill, folderHint: folderHint, targets: manager.defaultTargets)
+        let request = PendingInstall(skill: skill, folderHint: folderHint, targets: manager.defaultTargets, project: project)
         Task { await manager.install(request) }
     }
 

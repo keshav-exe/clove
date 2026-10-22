@@ -51,7 +51,7 @@ final class SkillManager {
     func install(_ install: PendingInstall, replacingConflict: Bool = false) async {
         let name = install.skill.skillId
         guard phases[name] == nil else { return }
-        phases[name] = lockEntries[name] == nil ? .installing : .updating
+        phases[name] = install.project == nil && lockEntries[name] != nil ? .updating : .installing
         defer { phases[name] = nil }
 
         do {
@@ -59,6 +59,7 @@ final class SkillManager {
                 install.skill,
                 folderHint: install.folderHint,
                 targets: install.targets,
+                project: install.project,
                 replacingConflict: replacingConflict
             )
             updatesAvailable.remove(name)
@@ -75,6 +76,27 @@ final class SkillManager {
         guard let pending = pendingConflict else { return }
         pendingConflict = nil
         await install(pending, replacingConflict: true)
+    }
+
+    /// Copies a skill into a project's `.agents/skills`, linked for each agent.
+    func addToProject(_ entry: CatalogEntry, project: URL, targets: Set<AgentTarget>) async {
+        let skill = entry.primary
+        do {
+            try await installer.addToProject(
+                skill.fileURL.deletingLastPathComponent(),
+                name: skill.directoryName,
+                project: project,
+                targets: targets
+            )
+            await filesChanged()
+        } catch SkillInstaller.Failure.conflict(let name) {
+            failure = ManagerFailure(
+                title: "\(project.lastPathComponent) already has “\(name)”",
+                message: "Open it from Locations › Projects, or remove that copy first."
+            )
+        } catch {
+            failure = ManagerFailure(title: "Couldn't add \(skill.directoryName) to \(project.lastPathComponent)", error: error)
+        }
     }
 
     // MARK: - Create

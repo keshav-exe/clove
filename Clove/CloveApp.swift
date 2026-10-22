@@ -10,7 +10,7 @@ struct CloveApp: App {
                 .environment(appDelegate.model)
                 .environment(appDelegate.updates)
         }
-        .defaultSize(width: 980, height: 640)
+        .defaultSize(width: 1240, height: 780)
         .commands {
             CloveCommands(model: appDelegate.model)
         }

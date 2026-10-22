@@ -45,23 +45,27 @@ actor SkillInstaller {
 
     // MARK: - Install
 
-    /// Downloads the skill's repository, copies the skill folder into
-    /// `~/.agents/skills`, links it into each target, and records it in the lock.
+    /// Downloads the skill's repository and places the skill folder, either
+    /// everywhere (`~/.agents/skills`, recorded in the lock so updates work) or
+    /// in one project (`<project>/.agents/skills`, committed with the code).
     /// Re-running this for an installed skill is how updates happen.
     @discardableResult
     func install(
         _ skill: MarketplaceSkill,
         folderHint: String? = nil,
         targets: Set<AgentTarget>,
+        project: URL? = nil,
         replacingConflict: Bool = false
     ) async throws -> URL {
         guard skill.isGitHub else { throw Failure.unsupportedSource }
         let name = try Self.validatedName(skill.skillId)
-        let destination = sharedFolder.appending(path: name, directoryHint: .isDirectory)
+        let base = project ?? home
+        let destination = AgentTarget.sharedFolder(home: base).appending(path: name, directoryHint: .isDirectory)
 
-        let existing = lock.entries()[name]
+        // The lock only tracks global installs; a project copy is the project's.
+        let existing = project == nil ? lock.entries()[name] : nil
         if fileManager.fileExists(atPath: destination.path(percentEncoded: false)),
-           existing?.source != skill.source,
+           project != nil || existing?.source != skill.source,
            !replacingConflict {
             throw Failure.conflict(name)
         }
@@ -83,19 +87,8 @@ actor SkillInstaller {
             fileManager: fileManager
         )
         let folderHash = try GitTreeHash.hash(ofFolder: folder)
-
-        try fileManager.createDirectory(at: sharedFolder, withIntermediateDirectories: true)
-        let staging = sharedFolder.appending(path: ".\(name).clove-\(UUID().uuidString)")
-        try fileManager.copyItem(at: folder, to: staging)
-
-        if fileManager.fileExists(atPath: destination.path(percentEncoded: false)) {
-            try fileManager.trashItem(at: destination, resultingItemURL: nil)
-        }
-        try fileManager.moveItem(at: staging, to: destination)
-
-        for target in targets {
-            try link(name, to: target)
-        }
+        try place(folder, name: name, in: base, targets: targets)
+        guard project == nil else { return destination }
 
         let relativeFolder = Self.relativePath(of: folder, in: repositoryRoot)
         try lock.record(
@@ -110,6 +103,39 @@ actor SkillInstaller {
             )
         )
         return destination
+    }
+
+    /// Copies a skill folder to `<base>/.agents/skills/<name>`, replacing an
+    /// older copy (which goes to the Trash), and links it into each agent.
+    @discardableResult
+    func place(_ folder: URL, name: String, in base: URL, targets: Set<AgentTarget>) throws -> URL {
+        let shared = AgentTarget.sharedFolder(home: base)
+        let destination = shared.appending(path: name, directoryHint: .isDirectory)
+        try fileManager.createDirectory(at: shared, withIntermediateDirectories: true)
+        let staging = shared.appending(path: ".\(name).clove-\(UUID().uuidString)")
+        try fileManager.copyItem(at: folder, to: staging)
+
+        if fileManager.fileExists(atPath: destination.path(percentEncoded: false)) {
+            try fileManager.trashItem(at: destination, resultingItemURL: nil)
+        }
+        try fileManager.moveItem(at: staging, to: destination)
+
+        for target in targets {
+            try link(name, to: target, base: base)
+        }
+        return destination
+    }
+
+    /// Copies a skill already on this Mac into a project, so it ships with the repo.
+    @discardableResult
+    func addToProject(_ skillFolder: URL, name: String, project: URL, targets: Set<AgentTarget>, replacing: Bool = false) throws -> URL {
+        let name = try Self.validatedName(name)
+        let destination = AgentTarget.sharedFolder(home: project).appending(path: name)
+        if fileManager.fileExists(atPath: destination.path(percentEncoded: false)), !replacing {
+            throw Failure.conflict(name)
+        }
+        // Copy what the link points at, not the link: the project needs real files.
+        return try place(skillFolder.resolvingSymlinksInPath(), name: name, in: project, targets: targets)
     }
 
     // MARK: - Create
@@ -137,12 +163,13 @@ actor SkillInstaller {
 
     /// Points `<agent>/skills/<name>` at the shared copy. A symlink that
     /// points somewhere else is replaced; a real folder goes to the Trash first.
-    func link(_ name: String, to target: AgentTarget) throws {
+    func link(_ name: String, to target: AgentTarget, base: URL? = nil) throws {
         let name = try Self.validatedName(name)
-        let agentFolder = target.folder(home: home)
+        let base = base ?? home
+        let agentFolder = target.folder(home: base)
         try fileManager.createDirectory(at: agentFolder, withIntermediateDirectories: true)
         let linkURL = agentFolder.appending(path: name)
-        let destination = sharedFolder.appending(path: name)
+        let destination = AgentTarget.sharedFolder(home: base).appending(path: name)
 
         if isSymbolicLink(linkURL) {
             let current = try fileManager.destinationOfSymbolicLink(atPath: linkURL.path(percentEncoded: false))
