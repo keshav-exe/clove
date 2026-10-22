@@ -144,6 +144,35 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "2.0",
+            title: "What's New in Clove",
+            subtitle: "Everything your agents load, in one place.",
+            symbolName: "leaf",
+            features: [
+                FeatureHighlight(
+                    symbolName: "leaf",
+                    title: "Cleanup",
+                    detail: "See which skills and commands your agents never call, what they cost every session, and how much old history sits on disk. Remove them in one click, with undo."
+                ),
+                FeatureHighlight(
+                    symbolName: "slider.horizontal.3",
+                    title: "Agent Setup",
+                    detail: "CLAUDE.md and AGENTS.md files, Cursor rules, commands, subagents, MCP servers, hooks, and permissions for every agent, in one list."
+                ),
+                FeatureHighlight(
+                    symbolName: "trophy",
+                    title: "Discover",
+                    detail: "Browse the skills.sh Top, Trending, and Hot lists, search every skill, and read its SKILL.md and security audits."
+                ),
+
+                FeatureHighlight(
+                    symbolName: "square.and.pencil",
+                    title: "Write Skills",
+                    detail: "Edit any SKILL.md with a live preview and format checks (⌘E), or start a new one from a template (⌘N)."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {

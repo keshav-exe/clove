@@ -6,9 +6,19 @@ struct LibraryRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.spacingXS) {
-            Text(entry.displayName)
-                .font(.body.weight(.medium))
-                .lineLimit(1)
+            HStack(spacing: Metrics.spacingXS) {
+                Text(entry.displayName)
+                    .font(.body.weight(.medium))
+                    .lineLimit(1)
+
+                if model.manager.hasUpdate(entry.primary.directoryName) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundStyle(.tint)
+                        .imageScale(.small)
+                        .accessibilityLabel("Update available")
+                        .help("A newer version is on GitHub")
+                }
+            }
 
             if !entry.summary.isEmpty {
                 Text(entry.summary)

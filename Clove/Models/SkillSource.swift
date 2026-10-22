@@ -36,6 +36,15 @@ enum SkillSource: String, CaseIterable, Sendable, Comparable {
         }
     }
 
+    /// Lives in an agent's own skills folder in the home directory, so Clove
+    /// may link or remove it. Plugins and projects belong to something else.
+    var isAgentHome: Bool {
+        switch self {
+        case .cursor, .claude, .agents, .codex: true
+        case .cursorBuiltin, .plugin, .project, .other: false
+        }
+    }
+
     static func < (lhs: SkillSource, rhs: SkillSource) -> Bool {
         lhs.sortOrder < rhs.sortOrder
     }

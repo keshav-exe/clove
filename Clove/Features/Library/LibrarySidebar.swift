@@ -9,8 +9,22 @@ struct LibrarySidebar: View {
         @Bindable var model = model
 
         List(selection: $model.sidebarSelection) {
+            Section("Discover") {
+                ForEach(DiscoverFeed.allCases) { feed in
+                    Label(feed.title, systemImage: feed.symbolName)
+                        .tag(SidebarItem.discover(feed))
+                }
+            }
+
             Section("Library") {
                 LibrarySidebarRow(filter: .all, tint: .primary)
+                CleanupSidebarRow()
+            }
+
+            Section("Agent Setup") {
+                ForEach(ResourceKind.allCases) { kind in
+                    ResourceSidebarRow(kind: kind)
+                }
             }
 
             if !model.availableSources.isEmpty {
@@ -30,7 +44,7 @@ struct LibrarySidebar: View {
                     ForEach(model.allGroups, id: \.self) { group in
                         LibrarySidebarRow(filter: .tag(group), tint: .teal)
                             .contextMenu {
-                                groupContextMenu(group)
+                                LibraryGroupMenu(group: group)
                             }
                     }
                 }
@@ -44,11 +58,12 @@ struct LibrarySidebar: View {
         )
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("New Group", systemImage: "folder.badge.plus") {
-                    newGroupName = ""
-                    isCreatingGroup = true
+                Menu("New", systemImage: "plus") {
+                    Button("New Skill…", systemImage: "doc.badge.plus", action: newSkill)
+                        .keyboardShortcut("n")
+                    Button("New Group…", systemImage: "folder.badge.plus", action: beginNewGroup)
                 }
-                .help("Create a new group")
+                .help("Create a skill or group")
             }
 
             ToolbarItem {
@@ -60,30 +75,27 @@ struct LibrarySidebar: View {
         }
         .alert("New Group", isPresented: $isCreatingGroup) {
             TextField("Group name", text: $newGroupName)
-            Button("Create") {
-                model.createGroup(named: newGroupName)
-                let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !name.isEmpty {
-                    model.libraryFilter = .tag(name)
-                }
-            }
+            Button("Create", action: createGroup)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Create a group, then add skills from the list or detail view.")
         }
     }
 
-    @ViewBuilder
-    private func groupContextMenu(_ group: String) -> some View {
-        Button("Copy Group", systemImage: "doc.on.doc") {
-            model.copyGroup(group)
-        }
-        Button(model.isGroupPinned(group) ? "Unpin from Panel" : "Pin to Panel", systemImage: "pin") {
-            model.togglePinGroup(group)
-        }
-        Divider()
-        Button("Delete Group", systemImage: "trash", role: .destructive) {
-            model.deleteGroup(group)
+    private func newSkill() {
+        model.isShowingSkillBuilder = true
+    }
+
+    private func beginNewGroup() {
+        newGroupName = ""
+        isCreatingGroup = true
+    }
+
+    private func createGroup() {
+        model.createGroup(named: newGroupName)
+        let name = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty {
+            model.show(.library(.tag(name)))
         }
     }
 }

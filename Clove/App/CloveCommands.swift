@@ -4,6 +4,14 @@ struct CloveCommands: Commands {
     let model: AppModel
 
     var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Skill…", systemImage: "doc.badge.plus") {
+                WindowBridge.shared.showLibraryWindow()
+                model.isShowingSkillBuilder = true
+            }
+            .keyboardShortcut("n")
+        }
+
         CommandGroup(after: .newItem) {
             Button("Refresh Skills", systemImage: "arrow.clockwise") {
                 Task { await model.refresh() }

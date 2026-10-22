@@ -13,9 +13,9 @@ struct PrivacyPromise: Identifiable, Hashable {
             detail: "Nothing is uploaded, synced, or analyzed in the cloud."
         ),
         PrivacyPromise(
-            symbolName: "eye.slash",
-            title: "Read-only",
-            detail: "Clove reads the frontmatter of SKILL.md files. It never writes to them."
+            symbolName: "hand.raised",
+            title: "Changes only when you ask",
+            detail: "Clove writes skill files only when you install, edit, or remove one. Anything replaced goes to the Trash."
         ),
         PrivacyPromise(
             symbolName: "externaldrive.badge.checkmark",
@@ -25,7 +25,7 @@ struct PrivacyPromise: Identifiable, Hashable {
         PrivacyPromise(
             symbolName: "wifi.slash",
             title: "No analytics",
-            detail: "Optional update checks are the only network call. No telemetry, no skill uploads."
+            detail: "Discover talks to skills.sh and GitHub only while you browse or install. No telemetry, no skill uploads."
         ),
     ]
 }

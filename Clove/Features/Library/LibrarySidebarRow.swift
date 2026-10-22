@@ -10,7 +10,13 @@ struct LibrarySidebarRow: View {
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(tint)
             .lineLimit(1)
-            .badge(model.count(of: filter))
-            .tag(filter)
+            .badge(badge)
+            .tag(SidebarItem.library(filter))
+    }
+
+    /// Zero shows no badge, like the system's own sidebars.
+    private var badge: Text? {
+        let count = model.count(of: filter)
+        return count == 0 ? nil : Text(count, format: .number)
     }
 }

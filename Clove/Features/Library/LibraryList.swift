@@ -30,14 +30,18 @@ struct LibraryList: View {
             }
         }
         .toolbar {
-            ToolbarItem {
+            // One group: separate items left empty glass capsules behind
+            // when the column switched to another section.
+            ToolbarItemGroup {
                 Button("Refresh", systemImage: "arrow.clockwise", action: refresh)
                     .disabled(model.isScanning)
                     .help("Rescan your skill folders")
-            }
 
-            if case .tag(let group) = model.libraryFilter {
-                ToolbarItem {
+                if !model.manager.lockEntries.isEmpty {
+                    LibraryUpdatesButton()
+                }
+
+                if case .tag(let group) = model.libraryFilter {
                     Menu {
                         ForEach(unassignedSkills(for: group)) { skill in
                             Button(skill.displayName) {
@@ -51,9 +55,7 @@ struct LibraryList: View {
                         Label("Add Skills", systemImage: "plus")
                     }
                     .help("Add skills to \(group)")
-                }
 
-                ToolbarItem {
                     Button("Copy Group", systemImage: "doc.on.doc") {
                         model.copyGroup(group)
                     }

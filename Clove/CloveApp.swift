@@ -15,6 +15,15 @@ struct CloveApp: App {
             CloveCommands(model: appDelegate.model)
         }
 
+        WindowGroup("Skill Editor", id: CloveWindowID.editor, for: URL.self) { $fileURL in
+            if let fileURL {
+                SkillEditorView(fileURL: fileURL)
+                    .environment(appDelegate.model)
+            }
+        }
+        .defaultSize(width: 960, height: 680)
+        .commandsRemoved()
+
         Settings {
             SettingsView()
                 .environment(appDelegate.model)
@@ -25,4 +34,5 @@ struct CloveApp: App {
 
 enum CloveWindowID {
     static let library = "library"
+    static let editor = "skill-editor"
 }

@@ -78,6 +78,11 @@ final class SettingsStore {
         didSet { defaults.set(installUpdateOnLaunch, forKey: Keys.installUpdateOnLaunch) }
     }
 
+    /// Agents a skill from skills.sh is linked into when installed.
+    var installTargets: Set<AgentTarget> {
+        didSet { defaults.set(installTargets.map(\.rawValue).sorted(), forKey: Keys.installTargets) }
+    }
+
     /// False when the system refused the shortcut, usually because another app owns it.
     var hotKeyIsRegistered = true
 
@@ -102,6 +107,7 @@ final class SettingsStore {
         pendingUpdateURL = defaults.string(forKey: Keys.pendingUpdateURL)
         installUpdateOnLaunch = defaults.bool(forKey: Keys.installUpdateOnLaunch)
         hotKey = Self.loadHotKey(from: defaults)
+        installTargets = Self.loadInstallTargets(from: defaults)
     }
 
     var scanConfiguration: ScanConfiguration {
@@ -134,6 +140,18 @@ final class SettingsStore {
         }
     }
 
+    /// Defaults to every agent that already has a folder in the home directory.
+    private static func loadInstallTargets(from defaults: UserDefaults) -> Set<AgentTarget> {
+        if let saved = defaults.stringArray(forKey: Keys.installTargets) {
+            return Set(saved.compactMap(AgentTarget.init(rawValue:)))
+        }
+        let present = AgentTarget.allCases.filter { target in
+            let agentHome = target.folder().deletingLastPathComponent()
+            return FileManager.default.fileExists(atPath: agentHome.path(percentEncoded: false))
+        }
+        return present.isEmpty ? [.claude] : Set(present)
+    }
+
     private static func loadHotKey(from defaults: UserDefaults) -> KeyChord? {
         guard let object = defaults.object(forKey: Keys.hotKey) else {
             return .default
@@ -162,6 +180,7 @@ final class SettingsStore {
         static let skippedUpdateVersion = "skippedUpdateVersion"
         static let pendingUpdateURL = "pendingUpdateURL"
         static let installUpdateOnLaunch = "installUpdateOnLaunch"
+        static let installTargets = "installTargets"
     }
 }
 

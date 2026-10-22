@@ -184,10 +184,15 @@ enum SkillFrontmatterParser {
     }
 
     private static func unquote(_ raw: String) -> String {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if (text.hasPrefix("\"") && text.hasSuffix("\"") && text.count >= 2)
-            || (text.hasPrefix("'") && text.hasSuffix("'") && text.count >= 2) {
-            text = String(text.dropFirst().dropLast())
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 2 else { return text }
+        if text.hasPrefix("\""), text.hasSuffix("\"") {
+            return String(text.dropFirst().dropLast())
+                .replacing("\\\"", with: "\"")
+                .replacing("\\\\", with: "\\")
+        }
+        if text.hasPrefix("'"), text.hasSuffix("'") {
+            return String(text.dropFirst().dropLast()).replacing("''", with: "'")
         }
         return text
     }

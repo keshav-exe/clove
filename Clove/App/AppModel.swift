@@ -5,7 +5,16 @@ import Observation
 @MainActor
 @Observable
 final class AppModel {
-    var skills: [Skill] = []
+    var skills: [Skill] = [] {
+        didSet { rebuildCatalog() }
+    }
+
+    /// Built once per scan. Views read this many times per frame, so it must
+    /// not be recomputed on access.
+    private(set) var catalog: [CatalogEntry] = []
+    /// Folder and frontmatter names of every local skill, for marking
+    /// skills.sh listings as installed without a scan per row.
+    private(set) var installedNames: Set<String> = []
     var isScanning = false
     var didScan = false
     var userTags: [String: [String]] = [:]
@@ -27,10 +36,28 @@ final class AppModel {
     /// Main window state, kept separate so the window and the panel never fight
     /// over the same search field.
     var libraryQuery = ""
-    var libraryFilter: LibraryFilter = .all
+    var libraryFilter: LibraryFilter = .all {
+        didSet {
+            if case .library = section {
+                section = .library(libraryFilter)
+            }
+        }
+    }
     var librarySelection: CatalogEntry.ID?
+    /// Instruction files, rules, commands, subagents, MCP servers, hooks, and
+    /// permissions, grouped by kind.
+    private(set) var resources: [ResourceKind: [AgentResource]] = [:]
+    var resourceSelection: AgentResource.ID?
+    var resourceQuery = ""
+
+    /// Which part of the main window is showing.
+    var section: SidebarItem = .library(.all)
+    var isShowingSkillBuilder = false
 
     let settings: SettingsStore
+    let marketplace: MarketplaceStore
+    let manager: SkillManager
+    let cleanup = CleanupStore()
     private let scanner: SkillScanner
     private let persistence: TagPersistence
 
@@ -42,13 +69,32 @@ final class AppModel {
         self.settings = settings
         self.scanner = scanner
         self.persistence = persistence
+        marketplace = MarketplaceStore()
+        manager = SkillManager(settings: settings)
         userTags = persistence.load()
+        manager.didChangeFiles = { [weak self] in
+            await self?.refresh()
+        }
     }
 
     // MARK: - Derived data
 
-    var catalog: [CatalogEntry] {
-        SkillCatalog.build(from: skills)
+    private func rebuildCatalog() {
+        catalog = SkillCatalog.build(from: skills)
+        var names: Set<String> = []
+        for skill in skills {
+            names.insert(skill.directoryName)
+            names.insert(skill.name)
+        }
+        installedNames = names
+    }
+
+    func isInstalled(_ listing: MarketplaceSkill) -> Bool {
+        installedNames.contains(listing.skillId) || installedNames.contains(listing.name)
+    }
+
+    func localEntry(for listing: MarketplaceSkill) -> CatalogEntry? {
+        catalog.first { entry in entry.copies.contains { listing.matches($0) } }
     }
 
     /// On-screen order: section headers, then the skills under them.
@@ -100,9 +146,67 @@ final class AppModel {
         librarySelectedEntry?.primary
     }
 
-    var sidebarSelection: LibraryFilter? {
-        get { libraryFilter }
-        set { libraryFilter = newValue ?? .all }
+    var sidebarSelection: SidebarItem? {
+        get { section }
+        set {
+            let item = newValue ?? .library(.all)
+            // The sidebar's table is still inside its selection callback here.
+            // Swapping the other columns now reloads tables re-entrantly and
+            // AppKit leaves them blank, so apply on the next turn.
+            Task { @MainActor [weak self] in
+                self?.show(item)
+            }
+        }
+    }
+
+    func show(_ item: SidebarItem) {
+        section = item
+        switch item {
+        case .discover(let feed):
+            marketplace.feed = feed
+        case .library(let filter):
+            libraryFilter = filter
+        case .cleanup, .resources:
+            break
+        }
+    }
+
+    var cleanupCandidates: [CleanupCandidate] {
+        cleanup.candidates(in: catalog, resources: allResources)
+    }
+
+    var allResources: [AgentResource] {
+        resources.values.flatMap(\.self)
+    }
+
+    func resources(of kind: ResourceKind) -> [AgentResource] {
+        resources[kind] ?? []
+    }
+
+    var selectedResource: AgentResource? {
+        guard let resourceSelection else { return nil }
+        return allResources.first { $0.id == resourceSelection }
+    }
+
+    /// Resources of one kind matching the search, in display order.
+    func filteredResources(of kind: ResourceKind) -> [AgentResource] {
+        let query = resourceQuery.trimmingCharacters(in: .whitespaces)
+        let all = resources(of: kind)
+        guard !query.isEmpty else { return all }
+        return all.filter { resource in
+            resource.name.localizedStandardContains(query)
+                || resource.summary.localizedStandardContains(query)
+                || resource.scope.title.localizedStandardContains(query)
+                || resource.agent.title.localizedStandardContains(query)
+        }
+    }
+
+    /// Jumps from a skills.sh listing to its installed copy.
+    func showInLibrary(_ listing: MarketplaceSkill) {
+        guard let entry = localEntry(for: listing) else { return }
+        libraryQuery = ""
+        show(.library(.all))
+        librarySelection = entry.id
     }
 
     var availableSources: [SkillSource] {
@@ -181,8 +285,22 @@ final class AppModel {
     func refresh() async {
         isScanning = true
         defer { isScanning = false }
-        skills = await scanner.scan(configuration: settings.scanConfiguration)
+        let configuration = settings.scanConfiguration
+        async let configScan = AgentConfigScanner().scan(
+            projectContainers: configuration.includeProjects ? configuration.projectRoots : []
+        )
+        skills = await scanner.scan(configuration: configuration)
+        resources = Dictionary(grouping: await configScan, by: \.kind)
+        if let resourceSelection, allResources.contains(where: { $0.id == resourceSelection }) == false {
+            self.resourceSelection = nil
+        }
+        manager.reloadLock()
+        let isFirstScan = !didScan
         didScan = true
+        if isFirstScan {
+            // Cached after the first run, so the sidebar count is ready early.
+            Task(priority: .utility) { await cleanup.scanIfNeeded() }
+        }
         remapSelectionsAfterScan()
     }
 

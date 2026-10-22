@@ -40,7 +40,7 @@ final class StatusItemController: NSObject {
         guard let button else { return }
         let image = NSImage(resource: .menuBarIcon)
         image.isTemplate = true
-        image.size = NSSize(width: 19, height: 18)
+        image.size = NSSize(width: 18, height: 18)
         button.image = image
         button.imagePosition = .imageOnly
         button.toolTip = "Clove"

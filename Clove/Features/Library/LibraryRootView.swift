@@ -9,6 +9,8 @@ struct LibraryRootView: View {
     @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
+        @Bindable var model = model
+
         librarySplit
             .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
             .background(LibraryWindowAccessor())
@@ -30,6 +32,10 @@ struct LibraryRootView: View {
                     offeredUpdate = updates.availableUpdate
                 }
             }
+            .sheet(isPresented: $model.isShowingSkillBuilder) {
+                NewSkillSheet()
+                    .environment(model)
+            }
             .sheet(isPresented: $isShowingOnboarding) {
                 OnboardingFlow()
                     .environment(model)
@@ -50,12 +56,70 @@ struct LibraryRootView: View {
         NavigationSplitView {
             LibrarySidebar()
         } content: {
-            LibraryList()
+            switch model.section {
+            case .discover:
+                DiscoverList()
+            case .library:
+                LibraryList()
+            case .cleanup:
+                CleanupList()
+            case .resources(let kind):
+                ResourceList(kind: kind)
+            }
         } detail: {
-            LibraryDetail()
+            switch model.section {
+            case .discover:
+                DiscoverDetail()
+            case .library:
+                LibraryDetail()
+            case .cleanup:
+                CleanupSummary()
+            case .resources:
+                ResourceDetailColumn()
+            }
         }
         .navigationTitle("Clove")
         .navigationSubtitle(subtitle)
+        .alert(
+            model.manager.failure?.title ?? "",
+            isPresented: isShowingFailure,
+            presenting: model.manager.failure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { failure in
+            Text(failure.message)
+        }
+        .confirmationDialog(
+            "Replace the existing skill?",
+            isPresented: isShowingConflict,
+            titleVisibility: .visible,
+            presenting: model.manager.pendingConflict
+        ) { pending in
+            Button("Replace “\(pending.skill.skillId)”", role: .destructive, action: replaceConflict)
+            Button("Cancel", role: .cancel) {}
+        } message: { pending in
+            Text("A skill named “\(pending.skill.skillId)” that didn't come from \(pending.skill.source) is already in ~/.agents/skills. It will be moved to the Trash.")
+        }
+    }
+
+    private var isShowingFailure: Binding<Bool> {
+        Binding {
+            model.manager.failure != nil
+        } set: { isShowing in
+            if !isShowing { model.manager.failure = nil }
+        }
+    }
+
+    private var isShowingConflict: Binding<Bool> {
+        Binding {
+            model.manager.pendingConflict != nil
+        } set: { isShowing in
+            if !isShowing { model.manager.pendingConflict = nil }
+        }
+    }
+
+    private func replaceConflict() {
+        Task { await model.manager.confirmPendingConflict() }
     }
 
     private func skipUpdateIfStillPending() {
@@ -67,6 +131,12 @@ struct LibraryRootView: View {
         guard model.settings.hasCompletedOnboarding else { return "Finish setup to scan" }
         if model.isScanning && model.skills.isEmpty {
             return "Scanning"
+        }
+        switch model.section {
+        case .discover: return "skills.sh"
+        case .cleanup: return "Unused skills, commands, and history"
+        case .resources(let kind): return kind.explanation
+        case .library: break
         }
         guard model.didScan else { return "" }
         let count = model.catalog.count

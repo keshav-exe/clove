@@ -53,6 +53,7 @@ struct GroupPickerField: View {
         HStack(spacing: 6) {
             TextField("Add to a group", text: $draft)
                 .textFieldStyle(.plain)
+                .accessibilityHint("Type a name to create a group, or choose an existing one.")
                 .focused($isFocused)
                 .onSubmit(submit)
                 .onKeyPress(.downArrow, action: moveDown)
@@ -74,9 +75,6 @@ struct GroupPickerField: View {
             RoundedRectangle(cornerRadius: Metrics.controlRadius)
                 .strokeBorder(Color.primary.opacity(isFocused ? 0.16 : 0.08), lineWidth: 1)
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Add to a group")
-        .accessibilityHint("Type a name to create a group, or choose an existing one.")
     }
 
     private var menu: some View {
