@@ -10,12 +10,12 @@ set -euo pipefail
 #
 # One-time setup:
 #   brew install gh create-dmg && gh auth login
-#   xcrun notarytool store-credentials clove --apple-id YOU@EMAIL --team-id 2FFZB6R6U8
+#   xcrun notarytool store-credentials AC_PASSWORD --apple-id YOU@EMAIL --team-id 2FFZB6R6U8
 #     (asks for an app-specific password from account.apple.com)
 
 VERSION="${1:-}"
 NOTES="${2:-}"
-NOTARY_PROFILE="${NOTARY_PROFILE:-clove}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-AC_PASSWORD}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
