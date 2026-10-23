@@ -106,6 +106,10 @@ Clove shares `~/.agents/.skill-lock.json` with the [skills CLI](https://github.c
 
 Network calls: skills.sh and GitHub while you use Discover or install and update a skill, plus optional app update checks. Installing from Clove sends no telemetry, so those installs don't count toward the skills.sh leaderboard. No analytics. No account.
 
+## Credits
+
+Several 2.0 features came from [Ram (@ramxcodes)](https://x.com/ramxcodes/status/2113292890294423802): installing skills into one project, hooks and instruction files like AGENTS.md, sharing one setup across agents, and moving keys out of `~/.zshenv` into Secrets. Thank you.
+
 ## License
 
 [MIT](LICENSE)
