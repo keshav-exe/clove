@@ -54,6 +54,8 @@ final class AppModel {
 
     /// Which part of the main window is showing.
     var section: SidebarItem = .home
+    /// The trending skill open in Home's detail column. Nil shows the dashboard.
+    var homeTrendingSelection: MarketplaceSkill.ID?
     var isShowingSkillBuilder = false
 
     let settings: SettingsStore
@@ -166,13 +168,20 @@ final class AppModel {
     func show(_ item: SidebarItem) {
         section = item
         switch item {
+        case .home:
+            homeTrendingSelection = nil
         case .discover:
             break
         case .library(let filter):
             libraryFilter = filter
-        case .home, .cleanup, .resources, .secrets, .running:
+        case .cleanup, .resources, .secrets, .running:
             break
         }
+    }
+
+    var homeTrendingSkill: MarketplaceSkill? {
+        guard let homeTrendingSelection else { return nil }
+        return marketplace.feeds[.trending]?.value?.first { $0.id == homeTrendingSelection }
     }
 
     private static func recentFirst(_ folders: [URL]) -> [URL] {

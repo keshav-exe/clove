@@ -18,7 +18,8 @@ struct CalmEmptyState<Art: View>: View {
                     .font(.subheadline)
                     .foregroundStyle(Palette.inkSecondary)
                     .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // No fixedSize here: inside this full-size frame it fed back
+                    // into the split view's layout and scrolled the sidebar away.
             }
             .frame(maxWidth: 380)
         }

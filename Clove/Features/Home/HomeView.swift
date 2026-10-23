@@ -24,7 +24,6 @@ struct HomeView: View {
                     HomeCleanupCard()
                     HomeContextCard()
                     HomeToolsCard()
-                    HomeTrendingCard()
                 }
             }
             .padding(.horizontal, 32)

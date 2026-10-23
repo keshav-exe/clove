@@ -25,7 +25,7 @@ struct PanelHeader: View {
                     model.confirmPanelSelection(
                         option: flags.contains(.option),
                         command: flags.contains(.command),
-                        dismiss: closePanel
+                        dismiss: closePanel.callAsFunction
                     )
                 }
                 .accessibilityLabel("Search skills")

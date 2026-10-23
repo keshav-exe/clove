@@ -2,7 +2,6 @@ import SwiftUI
 
 struct LibrarySidebar: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openSettings) private var openSettings
     @State private var isCreatingGroup = false
     @State private var newGroupName = ""
     // Collapsed sections stay collapsed across launches.
@@ -89,7 +88,7 @@ struct LibrarySidebar: View {
         // At the foot of the sidebar, like Claude and Mail: the toolbar above
         // a narrow sidebar pushed it into the overflow menu.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button(action: { openSettings() }) {
+            SettingsLink {
                 Label("Settings", systemImage: "gearshape")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Metrics.spacingM)

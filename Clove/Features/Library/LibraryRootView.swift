@@ -4,7 +4,6 @@ struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
     @Environment(UpdateService.self) private var updates
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
     @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var offeredUpdate: UpdateManifest?
@@ -23,9 +22,6 @@ struct LibraryRootView: View {
             .onAppear {
                 WindowBridge.shared.openLibraryWindow = {
                     openWindow(id: CloveWindowID.library)
-                }
-                WindowBridge.shared.openSettingsAction = {
-                    openSettings()
                 }
                 LibraryWindowTracker.shared.registerOpenWindow {
                     openWindow(id: CloveWindowID.library)
@@ -56,57 +52,53 @@ struct LibraryRootView: View {
             }
     }
 
-    /// Home is one wide page; everything else is a list and its detail.
-    @ViewBuilder
+    /// One three-column layout for every section, so switching sections never
+    /// rebuilds the sidebar.
     private var columns: some View {
-        if model.section == .home {
-            NavigationSplitView {
-                LibrarySidebar()
-            } detail: {
-                HomeView()
-            }
-        } else {
-            NavigationSplitView {
-                LibrarySidebar()
-            } content: {
-                // Widths live on the column, not on each list: set inside a
-                // switch they were ignored and the column stayed narrow.
-                Group {
-                    switch model.section {
-                    case .home, .library:
-                        LibraryList()
-                    case .discover:
-                        DiscoverList()
-                    case .cleanup:
-                        CleanupList()
-                    case .resources(let kind):
-                        ResourceList(kind: kind)
-                    case .secrets:
-                        SecretsList()
-                    case .running:
-                        RunningList()
-                    }
+        NavigationSplitView {
+            LibrarySidebar()
+        } content: {
+            // Widths live on the column, not on each list: set inside a
+            // switch they were ignored and the column stayed narrow.
+            Group {
+                switch model.section {
+                case .home:
+                    HomeList()
+                case .library:
+                    LibraryList()
+                case .discover:
+                    DiscoverList()
+                case .cleanup:
+                    CleanupList()
+                case .resources(let kind):
+                    ResourceList(kind: kind)
+                case .secrets:
+                    SecretsList()
+                case .running:
+                    RunningList()
                 }
-                .navigationSplitViewColumnWidth(min: Metrics.listMinWidth, ideal: Metrics.listIdealWidth, max: 480)
-            } detail: {
-                Group {
-                    switch model.section {
-                    case .home, .library:
-                        LibraryDetail()
-                    case .discover:
-                        DiscoverDetail()
-                    case .cleanup:
-                        CleanupSummary()
-                    case .resources:
-                        ResourceDetailColumn()
-                    case .secrets:
-                        SecretDetail()
-                    case .running:
-                        RunningDetail()
-                    }
-                }
-                .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 560)
             }
+            .navigationSplitViewColumnWidth(min: Metrics.listMinWidth, ideal: Metrics.listIdealWidth, max: 480)
+        } detail: {
+            Group {
+                switch model.section {
+                case .home:
+                    HomeDetail()
+                case .library:
+                    LibraryDetail()
+                case .discover:
+                    DiscoverDetail()
+                case .cleanup:
+                    CleanupSummary()
+                case .resources:
+                    ResourceDetailColumn()
+                case .secrets:
+                    SecretDetail()
+                case .running:
+                    RunningDetail()
+                }
+            }
+            .navigationSplitViewColumnWidth(min: Metrics.detailMinWidth, ideal: 560)
         }
     }
 

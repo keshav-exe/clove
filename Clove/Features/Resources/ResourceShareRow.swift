@@ -4,7 +4,7 @@ struct ResourceShareRow: View {
     let agent: AgentApp
     var file: String?
     let state: ResourceSharing.State
-    let toggle: (Bool) -> Void
+    let toggle: @MainActor (Bool) -> Void
 
     var body: some View {
         HStack(spacing: Metrics.spacingM) {

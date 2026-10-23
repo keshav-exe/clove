@@ -20,9 +20,9 @@ final class PanelController {
 
         let root = SkillsPanel()
             .environment(model)
-            .environment(\.closePanel) { [weak self] in
+            .environment(\.closePanel, ClosePanelAction { [weak self] in
                 self?.hide()
-            }
+            })
             .glassEffect(.regular, in: .rect(cornerRadius: Metrics.panelRadius))
             .clipShape(.rect(cornerRadius: Metrics.panelRadius))
 

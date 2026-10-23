@@ -1,6 +1,7 @@
 import Foundation
 
 enum ReleaseConfiguration {
-    /// JSON manifest: `{ "version": "1.0", "download_url": "https://…/Clove.dmg" }`
-    static let updateManifestURL: URL? = URL(string: "https://kshv.me/clove/appcast.json")
+    /// The newest GitHub release. Publishing one with `tools/release.sh` is all
+    /// it takes for every copy of Clove to see the update.
+    static let latestReleaseURL: URL? = URL(string: "https://api.github.com/repos/keshav-exe/clove/releases/latest")
 }

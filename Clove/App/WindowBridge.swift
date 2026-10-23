@@ -11,9 +11,6 @@ final class WindowBridge {
     var panelWindow: NSWindow?
 
     var openLibraryWindow: (() -> Void)?
-    /// SwiftUI's `openSettings`, registered by the library window. macOS 26
-    /// ignores the old `showSettingsWindow:` action for SwiftUI Settings scenes.
-    var openSettingsAction: (() -> Void)?
     var toggleQuickPanel: () -> Void = {}
 
     private init() {}
@@ -25,14 +22,11 @@ final class WindowBridge {
     func showSettings() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
-        if let openSettingsAction {
-            openSettingsAction()
-            return
-        }
-        // Nothing has registered yet: open the library, which registers, then retry.
-        showLibraryWindow()
-        Task { @MainActor in
-            self.openSettingsAction?()
-        }
+        // AppKit has no SettingsLink, so choose the app menu's own Settings item,
+        // the one SwiftUI's Settings scene puts there.
+        guard let appMenu = NSApp.mainMenu?.items.first?.submenu,
+              let index = appMenu.items.firstIndex(where: { $0.keyEquivalent == "," && $0.keyEquivalentModifierMask == .command })
+        else { return }
+        appMenu.performActionForItem(at: index)
     }
 }

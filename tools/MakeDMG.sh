@@ -154,5 +154,5 @@ echo ""
 if [[ "${NOTARIZE:-0}" != "1" ]]; then
   echo "Ship checklist:"
   echo '  1. SIGN_ID="Developer ID Application: ..." NOTARIZE=1 ./tools/MakeDMG.sh'
-  echo "  2. Upload DMG and update appcast.json"
+  echo "  2. Or ship it all at once: ./tools/release.sh VERSION"
 fi

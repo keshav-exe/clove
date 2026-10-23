@@ -16,7 +16,7 @@ final class UpdateService {
     }
 
     func checkForUpdates(userInitiated: Bool = false) async {
-        guard let manifestURL = ReleaseConfiguration.updateManifestURL else {
+        guard let manifestURL = ReleaseConfiguration.latestReleaseURL else {
             if userInitiated {
                 lastCheckError = "Updates are not configured for this build."
             }
