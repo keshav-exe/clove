@@ -50,7 +50,11 @@ enum SkillPageParser {
                 index += 1
                 continue
             }
-            flush()
+            // Inline tags like <code> sit inside a sentence; breaking the line
+            // there turned "use `npx skills find` to search" into three bullets.
+            if !isInlineTag(in: bytes, at: index) {
+                flush()
+            }
             if let skipped = endOfRawElement(in: bytes, at: index) {
                 index = skipped
                 continue
@@ -64,9 +68,27 @@ enum SkillPageParser {
         return lines
     }
 
+    private static let inlineTags: Set<String> = ["b", "code", "em", "i", "kbd", "mark", "small", "strong", "sub", "sup"]
+
+    /// Whether the tag starting at `start` (opening or closing) is one of `inlineTags`.
+    private static func isInlineTag(in bytes: [UInt8], at start: Int) -> Bool {
+        var index = start + 1
+        if index < bytes.count, bytes[index] == UInt8(ascii: "/") {
+            index += 1
+        }
+        var name: [UInt8] = []
+        while index < bytes.count, name.count < 8 {
+            let byte = bytes[index]
+            guard (byte >= UInt8(ascii: "a") && byte <= UInt8(ascii: "z")) || (byte >= UInt8(ascii: "A") && byte <= UInt8(ascii: "Z")) else { break }
+            name.append(byte | 0x20)
+            index += 1
+        }
+        return inlineTags.contains(String(decoding: name, as: UTF8.self))
+    }
+
     static func decodeEntities(_ text: String) -> String {
         guard text.contains("&") else { return text }
-        return text
+        return decodeNumericEntities(text)
             .replacing("&quot;", with: "\"")
             .replacing("&#x27;", with: "'")
             .replacing("&#39;", with: "'")
@@ -74,6 +96,18 @@ enum SkillPageParser {
             .replacing("&gt;", with: ">")
             .replacing("&nbsp;", with: " ")
             .replacing("&amp;", with: "&")
+    }
+
+    /// `&#x3C;` and `&#60;` style references, which pages use for any character.
+    private static func decodeNumericEntities(_ text: String) -> String {
+        guard text.contains("&#") else { return text }
+        return text.replacing(/&#(x?)([0-9A-Fa-f]+);/) { match in
+            let radix = match.output.1.isEmpty ? 10 : 16
+            guard let value = UInt32(match.output.2, radix: radix), let scalar = Unicode.Scalar(value) else {
+                return String(match.output.0)
+            }
+            return String(Character(scalar))
+        }
     }
 
     /// For `<script>` and `<style>`, the index just past their closing tag.

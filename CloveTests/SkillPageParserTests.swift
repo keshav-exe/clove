@@ -38,3 +38,8 @@ struct SkillPageParserTests {
         #expect(details.gitHubStars == nil)
     }
 }
+
+@Test func inlineTagsStayInOneLine() {
+    let lines = SkillPageParser.textLines(fromHTML: "<li>Provides <code>npx skills find</code> to search</li><li>Run <code>npx skills add &#x3C;package&#62;</code></li>")
+    #expect(lines == ["Provides npx skills find to search", "Run npx skills add <package>"])
+}

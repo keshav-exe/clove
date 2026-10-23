@@ -1,61 +1,78 @@
+<div align="center">
+
+<img src="Clove/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" alt="" width="96" />
+
 # Clove
 
-Native Mac app for everything your AI agents load: skills, instruction files, rules, commands, subagents, MCP servers, hooks, permissions, and the API keys they need. Find new skills on [skills.sh](https://skills.sh), see what each agent is set up with, and clean out what you don't use.
+**Everything your AI agents load, in one native Mac app.**
 
-**Free and open source.** MIT license. No account. No paywall.
+Skills, instruction files, rules, commands, subagents, MCP servers, hooks, permissions, and the API keys they need, across Claude Code, Cursor, and Codex. Find new skills on [skills.sh](https://skills.sh), see what each agent is set up with, and clean out what you don't use.
 
-[Download for Mac](https://github.com/keshav-exe/clove/releases/latest) · [Website](https://www.kshv.me/clove)
+[**Download for Mac**](https://github.com/keshav-exe/clove/releases/latest) · [Website](https://www.kshv.me/clove) · [What's new in 2.0](https://github.com/keshav-exe/clove/releases/tag/v2.0)
 
-<img src="docs/product-preview.png" alt="Clove quick access panel searching agent skills" width="360" />
+Free and open source · MIT · No account · macOS 26
 
-## What it does
+<img src="docs/screenshots/framed/home.png" alt="Clove's Home: what needs a look, trending skills, and cards for skills, running agents, cleanup, and context" />
 
-Skills live in `~/.cursor`, `~/.claude`, plugins, and project folders. Referencing them in a prompt means remembering a slash command or digging through Finder. Finding new ones means a browser and a terminal.
+</div>
 
-**Library**
+## Home
 
-- Scans every `SKILL.md` on your Mac: Claude Code, Cursor, Codex, the shared `~/.agents` folder, plugins, and projects, including skills linked in from a dotfiles repo
+One page with what needs a look right now: skills you never use, leftovers agents downloaded and forgot, old session history, keys sitting in plain text. Trending skills from skills.sh sit beside it, one click from their page.
+
+## Quick access panel
+
+<img src="docs/product-preview.png" alt="Clove quick access panel searching agent skills" width="420" align="right" />
+
+Skills live in `~/.cursor`, `~/.claude`, plugins, and project folders. Clove finds every `SKILL.md` on your Mac, including skills linked in from a dotfiles repo, and puts them one shortcut away.
+
 - Search names, descriptions, and groups
 - Copy prompt-ready references like `/animations` or `@nextjs`, not file paths
-- Pin a floating panel beside your editor (`⌘⇧K`), or drag a skill straight into a prompt
+- Pin the panel beside your editor (`⌘⇧K`), or drag a skill straight into a prompt
 - Group skills and copy a whole stack at once
 
-**Discover**
+<br clear="right" />
+
+## Discover
+
+<img src="docs/screenshots/framed/discover.png" alt="A skill from skills.sh with its installs, stars, security audits, highlights, and SKILL.md" />
 
 - Browse the skills.sh Top, Trending, and Hot lists, or search all of them
 - Read a skill's SKILL.md, highlights, and security audits before installing
-- Install in one click, for every project or just one. Clove puts one copy in `.agents/skills` and links it into the agents you pick, the same layout as `npx skills add`
+- Install in one click, everywhere or into one project. Clove puts one copy in `.agents/skills` and links it into the agents you pick, the same layout as `npx skills add`
+- Check installed skills for updates and update them in place
 
-**Context and tools**
+## Context and tools
 
-- Instruction files: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and Copilot instructions, globally and in each project, with what each costs in context
-- Point several agents at one instruction file: Clove links `CLAUDE.md` to a project's `AGENTS.md` so you edit one file
-- Cursor rules (`.cursor/rules/*.mdc`, `.cursorrules`), Windsurf rules, and Copilot instruction files, with when each applies
-- Slash commands and subagents for Claude Code, Cursor, and Codex. Share one with another agent and Clove links it, so edits reach both
-- MCP servers from Claude Code, Cursor, Codex, Gemini, Claude Desktop, and Windsurf. Add one to Cursor in a click, or copy the command that adds it to Claude Code or Codex. Environment variables and headers show names only
-- Hooks from Claude Code settings, Cursor's `hooks.json`, and Codex `notify`, with a warning when a hook's script is missing
-- Claude Code permission rules per project
+- **Instruction files:** `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and Copilot instructions, globally and per project, with what each costs in context. Point several agents at one file and edit it once
+- **Rules:** Cursor rules (`.cursor/rules/*.mdc`, `.cursorrules`), Windsurf rules, and Copilot instruction files, with when each applies
+- **Commands and subagents** for Claude Code, Cursor, and Codex. Share one with another agent and Clove links it, so edits reach both
+- **MCP servers** from Claude Code, Cursor, Codex, Gemini, Claude Desktop, and Windsurf. Add one to another agent in a click. Environment variables and headers show names only
+- **Hooks** from Claude Code, Cursor, and Codex, with a warning when a hook's script is missing
+- **Permissions:** Claude Code's allow and deny rules per project
 
-**Secrets**
+## Secrets
 
 - Keep API keys in your login Keychain instead of `~/.zshenv`
 - Clove finds keys exported in plain text from your shell profiles and moves them, rewriting each line to read from the Keychain
 - Copy a shell line or an MCP-safe command for any key. macOS asks before handing it to anything but Clove
 
-**Clean up**
+## Running
+
+<img src="docs/screenshots/framed/running.png" alt="Running agent sessions and MCP servers, with the folder, memory, and command for each" />
+
+Live agent sessions, the MCP servers they start, and the dev servers they leave behind. See what started each one, where it runs, and how much memory it holds. Stop the ones you're done with.
+
+## Cleanup
+
+<img src="docs/screenshots/framed/cleanup.png" alt="Cleanup listing unused skills and the tokens they cost every session" />
 
 - See which skills, commands, and subagents your agents haven't used in 30 days, 90 days, or 6 months, read from Claude Code, Codex, and Cursor history on your Mac
 - See what they cost: every installed skill's description loads into each agent session
-- Move them to the Trash in one click, with undo
-- Reclaim disk space from old agent sessions
+- Find leftovers like old Chrome for Testing builds, idle `npx` installs, and unused Claude Code versions
+- Move it all to the Trash in one click, with undo
 
-**Manage**
-
-- Turn a skill on or off per agent
-- Check skills from skills.sh for updates and update them in place
-- Move skills to the Trash, never straight to deletion
-
-**Write**
+## Write
 
 - Edit any SKILL.md with a live preview and checks against the Agent Skills format (`⌘E`)
 - Start a new skill from a guide, workflow, or review template (`⌘N`)
@@ -86,16 +103,10 @@ xcodebuild -scheme Clove -configuration Release -destination 'platform=macOS' bu
 
 Xcode 26 and the macOS 26 SDK.
 
-To package a drag-to-Applications disk image:
+To ship a release (signed, notarized, tagged, and on GitHub Releases in one go):
 
 ```bash
-./tools/MakeDMG.sh
-```
-
-Signed and notarized builds:
-
-```bash
-SIGN_ID="Developer ID Application: Your Name (TEAMID)" NOTARIZE=1 ./tools/MakeDMG.sh
+./tools/release.sh 2.1 docs/release-notes/2.1.md
 ```
 
 ## Privacy
@@ -109,6 +120,8 @@ Network calls: skills.sh and GitHub while you use Discover or install and update
 ## Credits
 
 Several 2.0 features came from [Ram (@ramxcodes)](https://x.com/ramxcodes/status/2113292890294423802): installing skills into one project, hooks and instruction files like AGENTS.md, sharing one setup across agents, and moving keys out of `~/.zshenv` into Secrets. Thank you.
+
+<a href="https://x.com/ramxcodes/status/2113292890294423802"><img src="docs/ram-tweet.png" alt="Ram's post suggesting project scoping, hooks and AGENTS.md support, a harness port across agents, and on-demand env access" width="420" /></a>
 
 ## License
 
