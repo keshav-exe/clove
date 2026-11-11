@@ -14,7 +14,7 @@ struct PermissionRow: View {
             if let isGranted {
                 Image(systemName: isGranted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isGranted ? Color.green : Color.orange)
+                    .foregroundStyle(isGranted ? Palette.mint : Color.orange)
                     .accessibilityLabel(isGranted ? "Enabled" : "Not enabled yet")
             }
         }

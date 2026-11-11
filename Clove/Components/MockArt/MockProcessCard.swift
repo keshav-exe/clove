@@ -10,7 +10,7 @@ struct MockProcessCard: View {
         MockCard(width: 220) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Circle()
-                    .fill(.green)
+                    .fill(Palette.mint)
                     .frame(width: 7, height: 7)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {

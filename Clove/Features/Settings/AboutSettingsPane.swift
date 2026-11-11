@@ -7,12 +7,29 @@ struct AboutSettingsPane: View {
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var offeredUpdate: UpdateManifest?
     @State private var updateNotice: UpdateNotice?
+    @State private var isConfirmingDeactivate = false
 
     var body: some View {
         SettingsForm(centered: true) {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsFieldRow(label: "Version") {
                     Text(AppVersion.display)
+                }
+
+                if LicenseConfiguration.isRequired, let license = model.license.license {
+                    SettingsFieldRow(label: "License") {
+                        HStack(spacing: Metrics.spacingS) {
+                            Text("Active on this Mac · \(license.maskedKey)")
+                                .foregroundStyle(.secondary)
+                            if model.license.isWorking {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Button("Deactivate…") {
+                                    isConfirmingDeactivate = true
+                                }
+                            }
+                        }
+                    }
                 }
 
                 SettingsFieldRow(label: "Updates") {
@@ -43,6 +60,22 @@ struct AboutSettingsPane: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+        .confirmationDialog("Deactivate Clove on this Mac?", isPresented: $isConfirmingDeactivate, titleVisibility: .visible) {
+            Button("Deactivate", role: .destructive) {
+                Task { await model.license.deactivate() }
+            }
+        } message: {
+            Text("Your key becomes free to use on another Mac, and Clove locks here until you enter it again.")
+        }
+        .alert(
+            model.license.failure?.message ?? "",
+            isPresented: Binding(
+                get: { model.license.failure != nil && model.license.isUnlocked },
+                set: { if !$0 { model.license.failure = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
         }
         .sheet(item: $whatsNewRelease) { release in
             WhatsNewSheet(release: release) {

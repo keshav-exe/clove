@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// Puts raw window captures on Clove's warm backdrop: rounded corners, a soft
+// Puts raw window captures on Clove's blue backdrop: rounded corners, a soft
 // shadow, and room to breathe. For the README and the website.
 //
 //   swift tools/FrameScreenshots.swift docs/screenshots docs/screenshots/framed
@@ -45,14 +45,14 @@ func frame(_ image: CGImage) -> CGImage? {
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { return nil }
 
-    // Backdrop: the icon's cream fading into its clay, with a soft glow up top.
+    // Backdrop: Clove's mint into its azure, deepening to navy, with a soft glow up top.
     let wash = CGGradient(
         colorsSpace: nil,
-        colors: [color(0xF4E6D4), color(0xE9B48C), color(0xB4532E)] as CFArray,
-        locations: [0, 0.55, 1]
+        colors: [color(0xD4F8EA), color(0x8EC6FF), color(0x1F6FE5), color(0x0B2A66)] as CFArray,
+        locations: [0, 0.35, 0.72, 1]
     )!
     context.drawLinearGradient(wash, start: CGPoint(x: 0, y: canvas.height), end: CGPoint(x: canvas.width, y: 0), options: [])
-    let glow = CGGradient(colorsSpace: nil, colors: [color(0xFFF8EE, 0.7), color(0xFFF8EE, 0)] as CFArray, locations: [0, 1])!
+    let glow = CGGradient(colorsSpace: nil, colors: [color(0xF2F8FF, 0.75), color(0xF2F8FF, 0)] as CFArray, locations: [0, 1])!
     let glowCenter = CGPoint(x: canvas.width * 0.3, y: canvas.height * 0.9)
     context.drawRadialGradient(glow, startCenter: glowCenter, startRadius: 0, endCenter: glowCenter, endRadius: canvas.width * 0.6, options: [])
 
@@ -62,7 +62,7 @@ func frame(_ image: CGImage) -> CGImage? {
     // Two shadows: a wide soft one for lift, a tight one for contact.
     for (blur, offset, alpha) in [(CGFloat(70), CGFloat(-28), CGFloat(0.32)), (14, -4, 0.22)] {
         context.saveGState()
-        context.setShadow(offset: CGSize(width: 0, height: offset), blur: blur, color: color(0x3A1608, alpha))
+        context.setShadow(offset: CGSize(width: 0, height: offset), blur: blur, color: color(0x06173D, alpha))
         context.addPath(shape)
         context.setFillColor(color(0x1E1E1E))
         context.fillPath()

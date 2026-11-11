@@ -19,7 +19,7 @@ struct CleanupHistoryCard: View {
                         "Moved \(result.count.formatted()) sessions, \(Self.bytes(result.bytes)), to the Trash.",
                         systemImage: "checkmark.circle.fill"
                     )
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Palette.mint)
                     Button("Undo", systemImage: "arrow.uturn.backward", action: undo)
                         .buttonStyle(.glass)
                 } else {

@@ -9,7 +9,7 @@ struct CleanupDoneView: View {
         VStack(alignment: .leading, spacing: Metrics.spacingS) {
             Label("Cleaned up", systemImage: "checkmark.circle.fill")
                 .font(.headline)
-                .foregroundStyle(.green)
+                .foregroundStyle(Palette.mint)
 
             Text(result.tokens, format: .number)
                 .font(.system(size: 64, weight: .semibold, design: .rounded))

@@ -9,7 +9,7 @@ struct CleanupAllClearView: View {
         VStack(alignment: .leading, spacing: Metrics.spacingS) {
             Label("Everything is pulling its weight", systemImage: "leaf")
                 .font(.headline)
-                .foregroundStyle(.green)
+                .foregroundStyle(Palette.mint)
 
             Text("Your agents used all \(skillCount) skills, and every command and subagent, in the last \(window.phrase).")
                 .font(.title3)

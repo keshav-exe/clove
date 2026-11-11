@@ -62,6 +62,7 @@ final class AppModel {
     let marketplace: MarketplaceStore
     let manager: SkillManager
     let cleanup = CleanupStore()
+    let license = LicenseStore()
     let secrets = SecretsStore()
     let running = RunningStore()
     private let scanner: SkillScanner

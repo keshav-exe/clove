@@ -39,7 +39,7 @@ struct OnboardingPermissionsStep: View {
             if permission.isRequired {
                 Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(accessibilityGranted ? .green : .orange)
+                    .foregroundStyle(accessibilityGranted ? Palette.mint : Color.orange)
                     .padding(.top, 4)
                     .accessibilityLabel(accessibilityGranted ? "Enabled" : "Not enabled yet")
             }

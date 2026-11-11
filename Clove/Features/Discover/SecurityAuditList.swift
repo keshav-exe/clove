@@ -32,7 +32,7 @@ struct SecurityAuditList: View {
 
     private func tint(for verdict: SkillAudit.Verdict) -> Color {
         switch verdict {
-        case .pass: .green
+        case .pass: Palette.mint
         case .warn: .orange
         case .fail: .red
         case .unknown: .secondary

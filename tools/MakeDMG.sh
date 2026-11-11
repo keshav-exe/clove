@@ -10,6 +10,7 @@ set -euo pipefail
 #   SIGN_ID="Developer ID Application: Your Name (TEAMID)"
 #   NOTARIZE=1                         submit + staple (needs NOTARY_PROFILE)
 #   NOTARY_PROFILE=AC_PASSWORD         notarytool keychain profile name (NOT the app password)
+#   LICENSED=1                         require a license key (official releases only)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -29,12 +30,18 @@ if [[ "${NOTARIZE:-0}" == "1" && -z "${SIGN_ID:-}" ]]; then
   exit 1
 fi
 
+BUILD_SETTINGS=()
+if [[ "${LICENSED:-0}" == "1" ]]; then
+  BUILD_SETTINGS+=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CLOVE_LICENSED')
+fi
+
 echo "-> Building ${SCHEME} (${CONFIG})..."
 xcodebuild \
   -project "$ROOT/Clove.xcodeproj" \
   -scheme "$SCHEME" \
   -configuration "$CONFIG" \
   -derivedDataPath "$DERIVED" \
+  ${BUILD_SETTINGS[@]+"${BUILD_SETTINGS[@]}"} \
   build
 
 if [[ ! -d "$APP" ]]; then

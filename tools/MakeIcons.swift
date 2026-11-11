@@ -23,13 +23,13 @@ let sepalBase = 40.0
 let crownRadius = 116.0
 let sepalAngles = [45.0, 135.0, 225.0, 315.0]
 
-// Clove, from bark to bloom.
-let paper = (top: NSColor(srgbRed: 0.98, green: 0.95, blue: 0.91, alpha: 1),
-             bottom: NSColor(srgbRed: 0.93, green: 0.87, blue: 0.80, alpha: 1))
-let sepalColor = (tip: NSColor(srgbRed: 0.66, green: 0.28, blue: 0.18, alpha: 1),
-                  base: NSColor(srgbRed: 0.37, green: 0.13, blue: 0.09, alpha: 1))
-let crownColor = (light: NSColor(srgbRed: 0.96, green: 0.75, blue: 0.55, alpha: 1),
-                  dark: NSColor(srgbRed: 0.81, green: 0.44, blue: 0.20, alpha: 1))
+// Cold and clean: ice tile, azure sepals, mint crown.
+let paper = (top: NSColor(srgbRed: 0.96, green: 0.98, blue: 1.00, alpha: 1),
+             bottom: NSColor(srgbRed: 0.85, green: 0.91, blue: 0.98, alpha: 1))
+let sepalColor = (tip: NSColor(srgbRed: 0.35, green: 0.63, blue: 1.00, alpha: 1),
+                  base: NSColor(srgbRed: 0.07, green: 0.29, blue: 0.76, alpha: 1))
+let crownColor = (light: NSColor(srgbRed: 0.75, green: 0.98, blue: 0.89, alpha: 1),
+                  dark: NSColor(srgbRed: 0.18, green: 0.75, blue: 0.56, alpha: 1))
 
 /// One sepal pointing up from the center, in a y-up coordinate space.
 func sepalControlPoints() -> [(Double, Double)] {
@@ -102,7 +102,7 @@ func drawMark(in rect: NSRect) {
     let center = NSPoint(x: rect.midX, y: rect.midY)
 
     let shadow = NSShadow()
-    shadow.shadowColor = NSColor(srgbRed: 0.23, green: 0.07, blue: 0.04, alpha: 0.30)
+    shadow.shadowColor = NSColor(srgbRed: 0.03, green: 0.11, blue: 0.30, alpha: 0.30)
     shadow.shadowOffset = NSSize(width: 0, height: -10 * scale)
     shadow.shadowBlurRadius = 24 * scale
 
@@ -190,11 +190,11 @@ func run() {
     // Icon Composer layers: flat fills, so the system adds glass, light, and dark/tinted looks.
     // Gradients run along each sepal (its local -y), lighter at the tip.
     let sepalGradient = "<linearGradient id=\"sepal\" x1=\"0\" y1=\"\(Int(-sepalLength))\" x2=\"0\" y2=\"0\" gradientUnits=\"userSpaceOnUse\">"
-        + "<stop stop-color=\"#A8452E\"/><stop offset=\"1\" stop-color=\"#6A2419\"/></linearGradient>"
+        + "<stop stop-color=\"#5AA0FF\"/><stop offset=\"1\" stop-color=\"#124AC2\"/></linearGradient>"
     let sepals = sepalAngles.map { sepalSVG(angle: $0, fill: "url(#sepal)") }.joined()
     write(Data(svgDocument("<defs>\(sepalGradient)</defs>" + sepals).utf8), to: iconAssets.appendingPathComponent("sepals.svg"))
     let crownGradient = "<radialGradient id=\"crown\" cx=\"478\" cy=\"470\" r=\"\(Int(crownRadius * 1.4))\" gradientUnits=\"userSpaceOnUse\">"
-        + "<stop stop-color=\"#F3B985\"/><stop offset=\"1\" stop-color=\"#D06F33\"/></radialGradient>"
+        + "<stop stop-color=\"#C0FAE3\"/><stop offset=\"1\" stop-color=\"#2EBF8F\"/></radialGradient>"
     let crown = "<defs>\(crownGradient)</defs><circle cx=\"512\" cy=\"512\" r=\"\(Int(crownRadius))\" fill=\"url(#crown)\"/>"
     write(Data(svgDocument(crown).utf8), to: iconAssets.appendingPathComponent("crown.svg"))
 

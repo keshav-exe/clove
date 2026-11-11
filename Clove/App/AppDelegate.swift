@@ -151,6 +151,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func togglePanel() {
+        // Locked: the shortcut leads to activation instead of an empty panel.
+        guard model.license.isUnlocked else {
+            NSApp.activate()
+            LibraryWindowTracker.shared.showLibraryWindow()
+            return
+        }
         panel?.toggle(relativeTo: statusItem?.button)
     }
 }

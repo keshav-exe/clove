@@ -17,7 +17,7 @@ struct RunningDetailView: View {
                         .textSelection(.enabled)
                     Label(isStopping ? "Stopping…" : "Running", systemImage: "circle.fill")
                         .font(.callout)
-                        .foregroundStyle(isStopping ? .orange : .green)
+                        .foregroundStyle(isStopping ? Color.orange : Palette.mint)
                 }
 
                 SkillDetailSection(title: "Details") {

@@ -27,7 +27,7 @@ struct DiscoverRow: View {
 
                     if isInstalled {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Palette.mint)
                             .imageScale(.small)
                             .accessibilityLabel("Installed")
                             .help("Installed on this Mac")

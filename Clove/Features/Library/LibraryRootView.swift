@@ -9,23 +9,39 @@ struct LibraryRootView: View {
     @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
+        Group {
+            if model.license.isUnlocked {
+                unlocked
+                    .transition(.opacity)
+            } else {
+                ActivationView()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.smooth(duration: 0.4), value: model.license.isUnlocked)
+        .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
+        .background(LibraryWindowAccessor())
+        .onAppear {
+            WindowBridge.shared.openLibraryWindow = {
+                openWindow(id: CloveWindowID.library)
+            }
+            LibraryWindowTracker.shared.registerOpenWindow {
+                openWindow(id: CloveWindowID.library)
+            }
+        }
+        .task {
+            await model.license.revalidateIfDue()
+        }
+    }
+
+    private var unlocked: some View {
         @Bindable var model = model
 
-        librarySplit
-            .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
-            .background(LibraryWindowAccessor())
+        return librarySplit
             .task {
                 await model.startIfNeeded()
                 await updates.checkForUpdates()
                 presentInitialSheets()
-            }
-            .onAppear {
-                WindowBridge.shared.openLibraryWindow = {
-                    openWindow(id: CloveWindowID.library)
-                }
-                LibraryWindowTracker.shared.registerOpenWindow {
-                    openWindow(id: CloveWindowID.library)
-                }
             }
             .onChange(of: updates.availableUpdate) {
                 if offeredUpdate == nil {

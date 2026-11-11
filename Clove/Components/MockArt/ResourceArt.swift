@@ -58,9 +58,9 @@ struct ResourceArt: View {
             MockStack {
                 MockFileCard(fileName: "Read(.env)", agent: ("Blocked", .red), lines: [""])
             } middle: {
-                MockFileCard(fileName: "Bash(git status)", agent: ("Allowed", .green), lines: [""])
+                MockFileCard(fileName: "Bash(git status)", agent: ("Allowed", Palette.mint), lines: [""])
             } front: {
-                MockFileCard(fileName: "Bash(npm test:*)", agent: ("Allowed", .green), lines: [""])
+                MockFileCard(fileName: "Bash(npm test:*)", agent: ("Allowed", Palette.mint), lines: [""])
             }
         }
     }

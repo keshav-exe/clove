@@ -9,7 +9,7 @@ struct CleanupLeftoversDone: View {
             "Moved \(result.count.formatted()) items, \(CleanupLeftoversCard.bytes(Int64(result.bytes))), to the Trash.",
             systemImage: "checkmark.circle.fill"
         )
-        .foregroundStyle(.green)
+        .foregroundStyle(Palette.mint)
         Button("Undo", systemImage: "arrow.uturn.backward", action: undo)
             .buttonStyle(.glass)
     }

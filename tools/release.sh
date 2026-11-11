@@ -49,7 +49,8 @@ sed -i '' \
 git commit -q -am "Release $VERSION" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 echo "-> Version $VERSION ($NEXT_BUILD) committed"
 
-SIGN_ID="$SIGN_ID" NOTARIZE=1 NOTARY_PROFILE="$NOTARY_PROFILE" ./tools/MakeDMG.sh
+# Official builds need a license key; builds from source don't.
+LICENSED=1 SIGN_ID="$SIGN_ID" NOTARIZE=1 NOTARY_PROFILE="$NOTARY_PROFILE" ./tools/MakeDMG.sh
 [[ -f "$DMG" ]] || fail "Expected $DMG after the build."
 
 git tag "$TAG"

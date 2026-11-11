@@ -7,7 +7,7 @@ struct RunningRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Metrics.spacingS) {
             Circle()
-                .fill(isStopping ? Color.orange : Color.green)
+                .fill(isStopping ? Color.orange : Palette.mint)
                 .frame(width: 7, height: 7)
                 .accessibilityLabel(isStopping ? "Stopping" : "Running")
 
