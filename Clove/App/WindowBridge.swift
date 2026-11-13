@@ -12,8 +12,15 @@ final class WindowBridge {
 
     var openLibraryWindow: (() -> Void)?
     var toggleQuickPanel: () -> Void = {}
+    /// Set by the app delegate, which owns the global hotkey.
+    var suspendHotKey: (Bool) -> Void = { _ in }
 
     private init() {}
+
+    /// While a shortcut is being recorded, the current one mustn't fire.
+    func setHotKeySuspended(_ suspended: Bool) {
+        suspendHotKey(suspended)
+    }
 
     func showLibraryWindow() {
         LibraryWindowTracker.shared.showLibraryWindow()

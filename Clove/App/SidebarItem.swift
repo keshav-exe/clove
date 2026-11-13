@@ -6,6 +6,7 @@ enum SidebarItem: Hashable, Sendable {
     case discover
     case library(LibraryFilter)
     case cleanup
+    case storage
     case resources(ResourceKind)
     case secrets
     case running

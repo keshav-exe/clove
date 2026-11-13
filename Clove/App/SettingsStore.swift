@@ -55,6 +55,16 @@ final class SettingsStore {
         didSet { defaults.set(savedGroupNames, forKey: Keys.savedGroupNames) }
     }
 
+    /// The blocks in the menu bar panel, in the order their tiles sit.
+    var panelBlocks: [PanelBlock] {
+        didSet { defaults.set(panelBlocks.map(\.rawValue), forKey: Keys.panelBlocks) }
+    }
+
+    /// The block the panel opens on: the last one picked.
+    var panelBlock: PanelBlock {
+        didSet { defaults.set(panelBlock.rawValue, forKey: Keys.panelBlock) }
+    }
+
     /// Groups pinned to the quick access panel for one-click filtering.
     var pinnedGroups: [String] {
         didSet { defaults.set(pinnedGroups, forKey: Keys.pinnedGroups) }
@@ -102,6 +112,9 @@ final class SettingsStore {
         pinnedPanelFrame = defaults.string(forKey: Keys.pinnedPanelFrame)
         savedGroupNames = defaults.stringArray(forKey: Keys.savedGroupNames) ?? []
         pinnedGroups = defaults.stringArray(forKey: Keys.pinnedGroups) ?? []
+        let blocks = (defaults.stringArray(forKey: Keys.panelBlocks) ?? []).compactMap(PanelBlock.init(rawValue:))
+        panelBlocks = blocks.isEmpty ? PanelBlock.defaults : blocks
+        panelBlock = defaults.string(forKey: Keys.panelBlock).flatMap(PanelBlock.init(rawValue:)) ?? .skills
         lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
         skippedUpdateVersion = defaults.string(forKey: Keys.skippedUpdateVersion)
         pendingUpdateURL = defaults.string(forKey: Keys.pendingUpdateURL)
@@ -176,6 +189,8 @@ final class SettingsStore {
         static let pinnedPanelFrame = "pinnedPanelFrame"
         static let savedGroupNames = "savedGroupNames"
         static let pinnedGroups = "pinnedGroups"
+        static let panelBlocks = "panelBlocks"
+        static let panelBlock = "panelBlock"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
         static let skippedUpdateVersion = "skippedUpdateVersion"
         static let pendingUpdateURL = "pendingUpdateURL"

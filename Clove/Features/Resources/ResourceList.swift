@@ -13,25 +13,28 @@ struct ResourceList: View {
 
         // Two groups, not one per project: a section per repo made a dozen
         // one-row headers that buried the names people scan for.
-        List(selection: $model.resourceSelection) {
+        ListPage(selection: $model.resourceSelection, order: (global + inProjects).map(\.id)) {
+            PageHeader(title: kind.title, summary: kind.subtitle)
+
             if !global.isEmpty {
-                Section("Everywhere") {
+                ListSection(title: "Everywhere", note: global.count.formatted()) {
                     ForEach(global) { resource in
-                        ResourceRow(resource: resource)
-                            .tag(resource.id)
+                        SelectableRow(id: resource.id, selection: $model.resourceSelection) {
+                            ResourceRow(resource: resource)
+                        }
                     }
                 }
             }
             if !inProjects.isEmpty {
-                Section("In Projects") {
+                ListSection(title: "In Projects", note: inProjects.count.formatted()) {
                     ForEach(inProjects) { resource in
-                        ResourceRow(resource: resource)
-                            .tag(resource.id)
+                        SelectableRow(id: resource.id, selection: $model.resourceSelection) {
+                            ResourceRow(resource: resource)
+                        }
                     }
                 }
             }
         }
-        .listStyle(.inset)
         .navigationTitle(kind.title)
         .searchable(text: $model.resourceQuery, prompt: "Search \(kind.title.lowercased())")
         .overlay {

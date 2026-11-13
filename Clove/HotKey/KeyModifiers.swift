@@ -28,6 +28,16 @@ struct KeyModifiers: OptionSet, Codable, Hashable, Sendable {
         return parts
     }
 
+    /// For menu items, whose shortcuts AppKit draws itself.
+    var cocoaFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if contains(.control) { flags.insert(.control) }
+        if contains(.option) { flags.insert(.option) }
+        if contains(.shift) { flags.insert(.shift) }
+        if contains(.command) { flags.insert(.command) }
+        return flags
+    }
+
     init(rawValue: UInt) {
         self.rawValue = rawValue
     }

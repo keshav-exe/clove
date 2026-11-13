@@ -51,6 +51,22 @@ final class PanelKeyRouter {
         let control = flags.contains(.control)
         let option = flags.contains(.option)
 
+        // ⌘1 to ⌘9 pick a block, from any block.
+        let settings = model.settings
+        if command, !shift, !option, !control,
+           let digit = event.charactersIgnoringModifiers.flatMap(Int.init), (1...settings.panelBlocks.count).contains(digit) {
+            settings.panelBlock = settings.panelBlocks[digit - 1]
+            return true
+        }
+        // The other blocks are pointer-first: only Esc, which closes the panel.
+        if settings.panelBlock != .skills {
+            if event.keyCode == 53 {
+                onClose()
+                return true
+            }
+            return false
+        }
+
         if let code = KeyCode(rawValue: event.keyCode) {
             switch code {
             case .downArrow:

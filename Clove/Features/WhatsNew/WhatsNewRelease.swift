@@ -172,6 +172,34 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.0",
+            title: "What's New in Clove",
+            subtitle: "See what's filling your Mac, and keep any part of Clove in the menu bar.",
+            symbolName: "internaldrive",
+            features: [
+                FeatureHighlight(
+                    symbolName: "internaldrive",
+                    title: "Storage",
+                    detail: "Your disk as a live bar: apps, code, photos, caches, and the Trash. Rest on a part to see what's in it, and clear caches or empty the Trash in one step."
+                ),
+                FeatureHighlight(
+                    symbolName: "square.grid.2x2",
+                    title: "Menu Bar Blocks",
+                    detail: "Pick the blocks your menu bar panel holds: Skills, Storage, Running, Cleanup, and Trending. ⌘1 to ⌘5 switch between them."
+                ),
+                FeatureHighlight(
+                    symbolName: "sidebar.left",
+                    title: "One Page per Section",
+                    detail: "A sidebar and one page, with what you pick opening beside it. Every section reads the same way, in light and dark."
+                ),
+                FeatureHighlight(
+                    symbolName: "bolt",
+                    title: "Lighter",
+                    detail: "Scans run gently in the background and are remembered for half an hour, and nothing animates once it settles."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {

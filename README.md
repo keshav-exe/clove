@@ -72,6 +72,19 @@ Live agent sessions, the MCP servers they start, and the dev servers they leave 
 - Find leftovers like old Chrome for Testing builds, idle `npx` installs, and unused Claude Code versions
 - Move it all to the Trash in one click, with undo
 
+## Storage
+
+Your disk as a live, dithered bar: apps, code and toolchains, photos, movies, documents, music, system data, caches, and the Trash, each in its own colour.
+
+- Rest on a part to see what's in it, like old simulators, `node_modules`, or agent history under Developer; click it to list its biggest items
+- Clear caches in one step. Caches for open apps and for macOS itself are left alone, and apps rebuild the rest when they need them
+- Empty the Trash, or move a big folder there from the list. Everything asks first, and whole agent folders like `~/.claude` are never offered
+- Scans run at low priority, a finished scan is remembered for 30 minutes, and the bar stops animating once it settles
+
+## Menu bar panel
+
+Pick the blocks your menu bar panel holds: Skills, Storage, Running, Cleanup, and Trending. Their tiles sit along the bottom of the panel, `⌘1` to `⌘5` switch between them, and Settings → General lists them too. The Storage block is the same live bar, at panel width. Right-click the menu bar icon for every section, with the panel shortcut shown the native way.
+
 ## Write
 
 - Edit any SKILL.md with a live preview and checks against the Agent Skills format (`⌘E`)
@@ -106,12 +119,12 @@ Xcode 26 and the macOS 26 SDK.
 To ship a release (signed, notarized, tagged, and on GitHub Releases in one go):
 
 ```bash
-./tools/release.sh 2.1 docs/release-notes/2.1.md
+./tools/release.sh 3.0 docs/release-notes/3.0.md
 ```
 
 ## Privacy
 
-Skills never leave your Mac. Cleanup reads agent transcripts on your Mac only to find skill names, and keeps nothing but those names and dates. Clove changes skill files only when you install, edit, or remove one, and anything it replaces goes to the Trash. Groups are saved in one JSON file inside Application Support.
+Skills never leave your Mac. Cleanup reads agent transcripts on your Mac only to find skill names, and keeps nothing but those names and dates. Clove changes skill files only when you install, edit, or remove one, and anything it replaces goes to the Trash. Groups are saved in one JSON file inside Application Support. Storage keeps its last scan, sizes and the names of your biggest folders, in a file only you can read inside Clove's own cache folder, left out of backups. It deletes only when you clear caches or empty the Trash, and checks each path at the moment it deletes.
 
 Clove shares `~/.agents/.skill-lock.json` with the [skills CLI](https://github.com/vercel-labs/skills), so skills installed either way show where they came from and can be updated by both.
 

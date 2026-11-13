@@ -12,7 +12,7 @@ struct CleanupHistoryCard: View {
         let old = cleanup.oldTranscripts
         let oldBytes = old.reduce(0) { $0 + $1.size }
 
-        SkillDetailSection(title: "Agent History") {
+        Tile { TileHeader(title: "Agent history") } content: {
             VStack(alignment: .leading, spacing: Metrics.spacingM) {
                 if let result = cleanup.historyResult {
                     Label(

@@ -17,74 +17,89 @@ struct CleanupCallout: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Metrics.spacingS) {
-            Text("Free up context")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+        Tile {
+            TileHeader(title: "Free up context", note: "\(candidates.count) unused")
+        } content: {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tokens, format: .number)
+                        .font(.system(size: 44, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Palette.ink)
+                        .contentTransition(.numericText(value: Double(tokens)))
+                        .animation(.snappy(duration: 0.2), value: tokens)
+                    Text("tokens your agents load every session, for skills and commands you haven't used in")
+                        .prose(13)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            Text(tokens, format: .number)
-                .font(.system(size: 64, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .contentTransition(.numericText(value: Double(tokens)))
-                .animation(.snappy(duration: 0.2), value: tokens)
+                HStack(alignment: .center, spacing: Metrics.spacingL) {
+                    Picker("Unused For", selection: $window) {
+                        ForEach(CleanupWindow.allCases) { window in
+                            Text(window.title).tag(window)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .help("How long a skill can go unused before it's listed")
 
-            Text("tokens your agents load in every session, for skills and commands you haven't used in")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: Metrics.spacingS)
 
-            Picker("Unused For", selection: $window) {
-                ForEach(CleanupWindow.allCases) { window in
-                    Text(window.title).tag(window)
+                    stat("Unused", candidates.count)
+                    stat("Never used", neverUsed)
+                    stat("Selected", selected.count)
+                }
+
+                Divider()
+
+                HStack(spacing: Metrics.spacingM) {
+                    Button(action: remove) {
+                        Label(
+                            selected.isEmpty ? "Nothing Selected" : "Move \(selected.count) to Trash",
+                            systemImage: "trash"
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(selected.isEmpty || isRemoving)
+
+                    if isRemoving {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Everything goes to the Trash, and Undo puts it back.")
+                            .prose(12)
+                            .foregroundStyle(Palette.inkSecondary)
+                    }
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .padding(.top, Metrics.spacingXS)
-            .help("How long a skill can go unused before it's listed")
         }
 
-        HStack(alignment: .top, spacing: Metrics.spacingXL) {
-            MarketplaceStat(title: "Unused") {
-                Text(candidates.count, format: .number)
+        HStack(alignment: .top, spacing: Metrics.spacingL) {
+            Tile {
+                TileHeader(title: "Biggest savings")
+            } content: {
+                CleanupSavingsList(candidates: Array(selected.sorted { $0.tokens > $1.tokens }.prefix(5)))
             }
-            MarketplaceStat(title: "Never Used") {
-                Text(neverUsed, format: .number)
-            }
-            MarketplaceStat(title: "Selected") {
-                Text(selected.count, format: .number)
-            }
-        }
-
-        HStack(spacing: Metrics.spacingM) {
-            Button(action: remove) {
-                Label(
-                    selected.isEmpty ? "Nothing Selected" : "Move \(selected.count) to Trash",
-                    systemImage: "trash"
-                )
-                .padding(.horizontal, Metrics.spacingXS)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .disabled(selected.isEmpty || isRemoving)
-
-            if isRemoving {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                Text("You can undo this.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            Tile {
+                TileHeader(title: "How Clove decides")
+            } content: {
+                CleanupMethodList(report: report, window: window)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
+    }
 
-        SkillDetailSection(title: "Biggest Savings") {
-            CleanupSavingsList(candidates: Array(selected.sorted { $0.tokens > $1.tokens }.prefix(5)))
+    private func stat(_ title: String, _ value: Int) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(value, format: .number)
+                .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Palette.ink)
+            Text(title)
+                .prose(11)
+                .foregroundStyle(Palette.inkSecondary)
         }
-
-        SkillDetailSection(title: "How Clove Decides") {
-            CleanupMethodList(report: report, window: window)
-        }
+        .accessibilityElement(children: .combine)
     }
 }

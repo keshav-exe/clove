@@ -6,32 +6,44 @@ struct SecretsList: View {
     var body: some View {
         @Bindable var secrets = model.secrets
 
-        List(selection: $secrets.selection) {
-            ForEach(secrets.items) { item in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(.body.monospaced().weight(.medium))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    if let updated = item.updatedAt {
-                        Text("Updated \(updated, format: .relative(presentation: .named))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 3)
-                .tag(item.id)
-            }
-        }
-        .listStyle(.inset)
-        .navigationTitle("Secrets")
-        .safeAreaInset(edge: .top, spacing: 0) {
+        ListPage(selection: $secrets.selection, order: secrets.items.map(\.id)) {
+            PageHeader(title: "Secrets", summary: "API keys kept in your Keychain, not a dotfile. macOS asks before anything reads one.")
+
             if !secrets.findings.isEmpty {
                 PlaintextBanner(count: secrets.findings.count) {
                     secrets.selection = nil
+                    secrets.isShowingFindings = true
+                }
+                .clipShape(.rect(cornerRadius: 14, style: .continuous))
+            }
+
+            if !secrets.items.isEmpty {
+                ListSection(title: "Keys", note: secrets.items.count.formatted()) {
+                    ForEach(secrets.items) { item in
+                        SelectableRow(id: item.id, selection: $secrets.selection) {
+                            HStack(spacing: Metrics.spacingM) {
+                                Image(systemName: "key.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Palette.Vivid.yellow)
+                                    .frame(width: 18)
+                                Text(item.name)
+                                    .codeLabel(13)
+                                    .foregroundStyle(Palette.ink)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Spacer(minLength: Metrics.spacingS)
+                                if let updated = item.updatedAt {
+                                    Text("Updated \(updated, format: .relative(presentation: .named))")
+                                        .monoLabel(11)
+                                        .foregroundStyle(Palette.inkSecondary)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+        .navigationTitle("Secrets")
         .overlay {
             if secrets.items.isEmpty {
                 CalmEmptyState(

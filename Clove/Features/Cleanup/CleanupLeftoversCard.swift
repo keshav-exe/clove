@@ -9,7 +9,7 @@ struct CleanupLeftoversCard: View {
     private var cleanup: CleanupStore { model.cleanup }
 
     var body: some View {
-        SkillDetailSection(title: "Agent Leftovers") {
+        Tile { TileHeader(title: "Agent leftovers") } content: {
             VStack(alignment: .leading, spacing: Metrics.spacingM) {
                 switch cleanup.leftovers {
                 case .idle, .loading:

@@ -31,6 +31,11 @@ if [[ "${NOTARIZE:-0}" == "1" && -z "${SIGN_ID:-}" ]]; then
 fi
 
 BUILD_SETTINGS=()
+# A plain build keeps the full symbol table, about 12 MB of a 21 MB app. Strip
+# it like an archive would; the dSYM next to the app keeps crashes readable.
+if [[ "$CONFIG" == "Release" ]]; then
+  BUILD_SETTINGS+=(DEPLOYMENT_POSTPROCESSING=YES STRIP_INSTALLED_PRODUCT=YES STRIP_STYLE=all)
+fi
 if [[ "${LICENSED:-0}" == "1" ]]; then
   BUILD_SETTINGS+=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CLOVE_LICENSED')
 fi

@@ -31,6 +31,25 @@ struct GeneralSettingsPane: View {
 
             SettingsPaneDivider()
 
+            SettingsSection(
+                footer: "The menu bar panel shows one block at a time; their tiles along its bottom switch between them, and ⌘1 to ⌘5 do the same. One block always stays."
+            ) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Menu bar panel")
+                        .font(.headline)
+                        .padding(.bottom, 6)
+                    ForEach(PanelBlock.allCases) { block in
+                        SettingsCheckboxRow(
+                            title: "\(block.title): \(block.detail.prefix(1).lowercased() + block.detail.dropFirst())",
+                            isOn: settings.blockBinding(block),
+                            isDisabled: settings.panelBlocks == [block]
+                        )
+                    }
+                }
+            }
+
+            SettingsPaneDivider()
+
             SettingsFieldRow(label: "Skill library") {
                 Button("Open Library…") {
                     WindowBridge.shared.showLibraryWindow()

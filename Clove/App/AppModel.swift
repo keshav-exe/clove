@@ -54,14 +54,16 @@ final class AppModel {
 
     /// Which part of the main window is showing.
     var section: SidebarItem = .home
-    /// The trending skill open in Home's detail column. Nil shows the dashboard.
-    var homeTrendingSelection: MarketplaceSkill.ID?
     var isShowingSkillBuilder = false
+    /// The menu bar panel is on screen. Its blocks only exist while it is, so a
+    /// hidden panel never scans, polls, or animates.
+    var isPanelVisible = false
 
     let settings: SettingsStore
     let marketplace: MarketplaceStore
     let manager: SkillManager
     let cleanup = CleanupStore()
+    let storage = StorageStore()
     let license = LicenseStore()
     let secrets = SecretsStore()
     let running = RunningStore()
@@ -169,20 +171,13 @@ final class AppModel {
     func show(_ item: SidebarItem) {
         section = item
         switch item {
-        case .home:
-            homeTrendingSelection = nil
-        case .discover:
+        case .home, .discover:
             break
         case .library(let filter):
             libraryFilter = filter
-        case .cleanup, .resources, .secrets, .running:
+        case .cleanup, .storage, .resources, .secrets, .running:
             break
         }
-    }
-
-    var homeTrendingSkill: MarketplaceSkill? {
-        guard let homeTrendingSelection else { return nil }
-        return marketplace.feeds[.trending]?.value?.first { $0.id == homeTrendingSelection }
     }
 
     private static func recentFirst(_ folders: [URL]) -> [URL] {

@@ -35,7 +35,6 @@ struct LibraryRow: View {
 
             SourceBadgeRow(items: entry.sourceBadges)
         }
-        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .skillDraggable(entry.primary)
         .contextMenu {

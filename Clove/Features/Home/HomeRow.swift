@@ -14,17 +14,17 @@ struct HomeRow: View {
         Button(action: open) {
             HStack(spacing: Metrics.spacingS) {
                 Text(label)
+                    .prose(13)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: Metrics.spacingS)
                 Text(value)
-                    .monospacedDigit()
-                    .foregroundStyle(isWarning ? AnyShapeStyle(.orange) : AnyShapeStyle(Palette.inkSecondary))
+                    .monoLabel(12)
+                    .foregroundStyle(isWarning ? AnyShapeStyle(Palette.Vivid.orange) : AnyShapeStyle(Palette.inkSecondary))
                     .lineLimit(1)
             }
-            .font(.callout)
-            .padding(.vertical, 7)
+            .padding(.vertical, 8)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)

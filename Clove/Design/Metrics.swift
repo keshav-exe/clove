@@ -18,6 +18,10 @@ enum Metrics {
     static let listMinWidth: Double = 300
     static let listIdealWidth: Double = 340
     static let detailMinWidth: Double = 380
+    /// The page beside the sidebar, before an inspector opens.
+    static let pageMinWidth: Double = 440
+    /// Overview pages read at this width and centre past it.
+    static let pageMaxWidth: Double = 860
 
     static let settingsWidth: Double = 580
     static let settingsHeight: Double = 520

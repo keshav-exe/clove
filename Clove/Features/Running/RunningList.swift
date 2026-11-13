@@ -7,20 +7,24 @@ struct RunningList: View {
     var body: some View {
         @Bindable var running = model.running
 
-        List(selection: $running.selection) {
-            ForEach(RunningProcess.Kind.allCases, id: \.self) { kind in
+        let kinds = RunningProcess.Kind.allCases
+
+        ListPage(selection: $running.selection, order: kinds.flatMap { running.items(of: $0).map(\.id) }) {
+            PageHeader(title: "Running", summary: "Agent sessions, the MCP servers they start, and dev servers they leave behind. Clove checks every few seconds.")
+
+            ForEach(kinds, id: \.self) { kind in
                 let items = running.items(of: kind)
                 if !items.isEmpty {
-                    Section(kind.title) {
+                    ListSection(title: kind.title, note: items.count.formatted()) {
                         ForEach(items) { process in
-                            RunningRow(process: process, isStopping: running.stopping.contains(process.pid))
-                                .tag(process.id)
+                            SelectableRow(id: process.id, selection: $running.selection) {
+                                RunningRow(process: process, isStopping: running.stopping.contains(process.pid))
+                            }
                         }
                     }
                 }
             }
         }
-        .listStyle(.inset)
         .navigationTitle("Running")
         .overlay {
             switch running.processes {

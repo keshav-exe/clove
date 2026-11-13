@@ -16,6 +16,34 @@ struct KeyChord: Equatable, Codable, Hashable, Sendable {
         Self.name(for: keyCode)
     }
 
+    /// The character an NSMenuItem needs to draw this chord on the right of a
+    /// menu, the native way. Nil for keys a menu can't show.
+    var menuKeyEquivalent: String? {
+        if let special = Self.menuKeys[keyCode] {
+            return String(Character(UnicodeScalar(special) ?? " "))
+        }
+        guard let letter = Self.translatedCharacter(for: keyCode), letter.count == 1 else { return nil }
+        return letter.lowercased()
+    }
+
+    private static let menuKeys: [UInt32: UInt32] = [
+        36: 0x0D,
+        48: 0x09,
+        49: 0x20,
+        51: 0x08,
+        53: 0x1B,
+        76: 0x03,
+        117: 0x7F,
+        122: UInt32(NSF1FunctionKey), 120: UInt32(NSF2FunctionKey), 99: UInt32(NSF3FunctionKey),
+        118: UInt32(NSF4FunctionKey), 96: UInt32(NSF5FunctionKey), 97: UInt32(NSF6FunctionKey),
+        98: UInt32(NSF7FunctionKey), 100: UInt32(NSF8FunctionKey), 101: UInt32(NSF9FunctionKey),
+        109: UInt32(NSF10FunctionKey), 103: UInt32(NSF11FunctionKey), 111: UInt32(NSF12FunctionKey),
+        115: UInt32(NSHomeFunctionKey), 119: UInt32(NSEndFunctionKey),
+        116: UInt32(NSPageUpFunctionKey), 121: UInt32(NSPageDownFunctionKey),
+        123: UInt32(NSLeftArrowFunctionKey), 124: UInt32(NSRightArrowFunctionKey),
+        125: UInt32(NSDownArrowFunctionKey), 126: UInt32(NSUpArrowFunctionKey),
+    ]
+
     init(keyCode: UInt32, modifiers: KeyModifiers) {
         self.keyCode = keyCode
         self.modifiers = modifiers

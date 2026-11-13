@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Floats over the scrolling SKILL.md, so install is always one click away.
+/// Sits under the scrolling SKILL.md, so install is always one click away.
 struct MarketplaceInstallBar: View {
     @Environment(AppModel.self) private var model
     let skill: MarketplaceSkill
@@ -46,8 +46,15 @@ struct MarketplaceInstallBar: View {
             }
             .controlSize(.large)
         }
-        .padding(Metrics.spacingL)
+        .padding(.horizontal, Metrics.spacingL)
+        .padding(.vertical, Metrics.spacingM)
         .frame(maxWidth: .infinity)
+        // A bar, not floating buttons: in a narrow inspector the SKILL.md
+        // would otherwise run straight through the install options.
+        .background(.bar)
+        .overlay(alignment: .top) {
+            Divider()
+        }
         .sensoryFeedback(.success, trigger: didCopyCommand) { _, copied in copied }
         .task(id: didCopyCommand) {
             guard didCopyCommand else { return }

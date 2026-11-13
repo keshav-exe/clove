@@ -21,6 +21,7 @@ struct LibrarySidebar: View {
                     .tag(SidebarItem.home)
                 RunningSidebarRow()
                 CleanupSidebarRow()
+                StorageSidebarRow()
             }
 
             Section("Skills", isExpanded: $showsSkills) {

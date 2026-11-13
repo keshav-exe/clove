@@ -8,35 +8,42 @@ struct DiscoverList: View {
     var body: some View {
         @Bindable var store = model.marketplace
 
-        List(selection: $store.selection) {
-            if let skills = store.visible.value {
-                ForEach(skills.enumerated(), id: \.element.id) { index, skill in
-                    DiscoverRow(
-                        skill: skill,
-                        rank: store.isSearching ? nil : index + 1,
-                        showsChange: store.feed == .hot && !store.isSearching,
-                        isInstalled: model.isInstalled(skill)
-                    )
-                    .tag(skill.id)
-                }
-            }
-        }
-        .listStyle(.inset)
-        .navigationTitle("Discover")
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if !store.isSearching {
-                Picker("List", selection: $store.feed) {
-                    ForEach(DiscoverFeed.allCases) { feed in
-                        Text(feed.title).tag(feed)
+        let skills = store.visible.value ?? []
+
+        ListPage(selection: $store.selection, order: skills.map(\.id)) {
+            PageHeader(title: "Discover", summary: "The skills.sh leaderboards. Read a skill's SKILL.md and its security audits before you install it.")
+
+            if !skills.isEmpty {
+                ListSection(
+                    title: store.isSearching ? "Results" : store.feed.title,
+                    note: store.isSearching ? skills.count.formatted() : store.feed.subtitle
+                ) {
+                    if !store.isSearching {
+                        Picker("List", selection: $store.feed) {
+                            ForEach(DiscoverFeed.allCases) { feed in
+                                Text(feed.title).tag(feed)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .controlSize(.small)
+                        .fixedSize()
+                    }
+                } content: {
+                    ForEach(skills.enumerated(), id: \.element.id) { index, skill in
+                        SelectableRow(id: skill.id, selection: $store.selection) {
+                            DiscoverRow(
+                                skill: skill,
+                                rank: store.isSearching ? nil : index + 1,
+                                showsChange: store.feed == .hot && !store.isSearching,
+                                isInstalled: model.isInstalled(skill)
+                            )
+                        }
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .help(store.feed.subtitle)
-                .padding(.horizontal, Metrics.spacingL)
-                .padding(.vertical, Metrics.spacingS)
             }
         }
+        .navigationTitle("Discover")
         .searchable(text: $store.query, prompt: "Search skills.sh")
         .overlay {
             DiscoverListStatus(state: store.visible, query: store.query, retry: reload)

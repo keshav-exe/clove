@@ -18,7 +18,7 @@ final class PanelController {
     init(model: AppModel) {
         self.model = model
 
-        let root = SkillsPanel()
+        let root = QuickPanel()
             .environment(model)
             .environment(\.closePanel, ClosePanelAction { [weak self] in
                 self?.hide()
@@ -72,6 +72,7 @@ final class PanelController {
     func show(relativeTo statusButton: NSView? = nil) {
         InsertTarget.captureCurrent()
         model.prepareForDisplay()
+        model.isPanelVisible = true
         anchorStatusButton = statusButton
         position(relativeTo: statusButton)
 
@@ -92,6 +93,7 @@ final class PanelController {
         saveFrameIfPinned()
         removeOutsideClickMonitor()
         panel.orderOut(nil)
+        model.isPanelVisible = false
     }
 
     /// Clicks inside Clove are delivered locally, so a global monitor only sees

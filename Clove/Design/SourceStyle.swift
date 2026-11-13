@@ -14,14 +14,14 @@ extension SkillSource {
 
     var tint: Color {
         switch self {
-        case .cursor: .blue
-        case .cursorBuiltin: .gray
-        case .claude: .orange
-        case .agents: .purple
-        case .codex: .green
-        case .plugin: .pink
-        case .project: .yellow
-        case .other: .secondary
+        case .cursor: Palette.Vivid.blue
+        case .cursorBuiltin: Palette.inkSecondary
+        case .claude: Palette.Vivid.orange
+        case .agents: Palette.Vivid.violet
+        case .codex: Palette.Vivid.green
+        case .plugin: Palette.Vivid.pink
+        case .project: Palette.Vivid.yellow
+        case .other: Palette.inkSecondary
         }
     }
 }

@@ -21,6 +21,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.handler = { [weak self] in
             self?.togglePanel()
         }
+        WindowBridge.shared.suspendHotKey = { [weak self] suspended in
+            guard let self else { return }
+            if suspended {
+                hotKeys.unregister()
+            } else {
+                applyHotKey()
+            }
+        }
 
         applySettings()
         watchSettings()
@@ -40,6 +48,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSApp.activate()
+
+        #if DEBUG
+        // `-panelPreview <block>`: open the panel pinned on a block, for screenshots.
+        if let index = CommandLine.arguments.firstIndex(of: "-panelPreview") {
+            let name = CommandLine.arguments.indices.contains(index + 1) ? CommandLine.arguments[index + 1] : ""
+            if let block = PanelBlock(rawValue: name) {
+                model.settings.setBlock(block, included: true)
+                model.settings.panelBlock = block
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.panel?.setPinned(true)
+                self?.panel?.show()
+            }
+        }
+        #endif
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -109,11 +132,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.onToggle = { [weak self] in
                 self?.togglePanel()
             }
-            item.onOpenWindow = {
+            item.onShow = { [weak self] destination in
                 WindowBridge.shared.showLibraryWindow()
+                self?.model.show(destination)
             }
             item.onSettings = {
                 WindowBridge.shared.showSettings()
+            }
+            item.onCheckForUpdates = { [weak self] in
+                guard let self else { return }
+                WindowBridge.shared.showLibraryWindow()
+                Task { await self.updates.checkForUpdates(userInitiated: true) }
+            }
+            item.panelShortcut = { [weak self] in
+                guard let settings = self?.model.settings, settings.hotKeyEnabled else { return nil }
+                return settings.hotKey
+            }
+            item.badge = { [weak self] destination in
+                guard let model = self?.model else { return nil }
+                switch destination {
+                case .cleanup:
+                    let count = model.cleanupCandidates.count
+                    return count == 0 ? nil : count.formatted(.number)
+                case .storage:
+                    return model.storage.recommendation.map { StorageFormat.gb(model.storage.clearableBytes(for: $0)) }
+                default:
+                    return nil
+                }
             }
             item.onQuit = {
                 NSApp.terminate(nil)

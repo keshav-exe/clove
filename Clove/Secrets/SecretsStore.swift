@@ -10,6 +10,8 @@ final class SecretsStore {
     private(set) var loadError: String?
     var selection: SecretItem.ID?
     var isAdding = false
+    /// The plain-text findings are open in the inspector.
+    var isShowingFindings = false
     var failure: ManagerFailure?
 
     func load() {

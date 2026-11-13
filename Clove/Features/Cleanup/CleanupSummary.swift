@@ -12,7 +12,9 @@ struct CleanupSummary: View {
 
         Group {
             if let report = cleanup.usage.value {
-                CleanupPage {
+                OverviewPage {
+                    PageHeader(title: "Cleanup", summary: "Skills and commands nobody calls still cost context in every session. Clove reads your agent history to find them.")
+
                     if let result = cleanup.lastResult {
                         CleanupDoneView(result: result, undo: undo, dismiss: cleanup.dismissResult)
                     } else if candidates.isEmpty {
@@ -26,6 +28,24 @@ struct CleanupSummary: View {
                             isRemoving: cleanup.isRemoving,
                             remove: { remove(candidates) }
                         )
+
+                        Tile {
+                            TileHeader(title: "Unused", note: candidates.count.formatted())
+                        } content: {
+                            VStack(spacing: 0) {
+                                ForEach(candidates) { candidate in
+                                    CleanupRow(
+                                        candidate: candidate,
+                                        isSelected: cleanup.isSelected(candidate),
+                                        toggle: { cleanup.toggle(candidate) }
+                                    )
+                                    .padding(.vertical, 3)
+                                    .overlay(alignment: .top) {
+                                        Rectangle().fill(Palette.hairline).frame(height: 0.5)
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     CleanupLeftoversCard()
@@ -34,10 +54,25 @@ struct CleanupSummary: View {
             } else {
                 ProgressView("Reading agent history…")
                     .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Cleanup")
         .animation(.smooth(duration: 0.25), value: cleanup.lastResult == nil)
+        .toolbar {
+            ToolbarItem {
+                Button("Rescan History", systemImage: "arrow.clockwise", action: rescan)
+                    .disabled(cleanup.usage.isLoading)
+                    .help("Read your agent history again")
+            }
+        }
+        .task {
+            await cleanup.scanIfNeeded()
+        }
+    }
+
+    private func rescan() {
+        Task { await model.cleanup.scan() }
     }
 
     private var windowBinding: Binding<CleanupWindow> {

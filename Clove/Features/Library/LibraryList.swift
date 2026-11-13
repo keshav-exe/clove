@@ -6,13 +6,21 @@ struct LibraryList: View {
     var body: some View {
         @Bindable var model = model
 
-        List(selection: $model.librarySelection) {
-            ForEach(model.libraryResults) { entry in
-                LibraryRow(entry: entry)
-                    .tag(entry.id)
+        let results = model.libraryResults
+
+        ListPage(selection: $model.librarySelection, order: results.map(\.id)) {
+            PageHeader(title: model.libraryFilter.title, summary: summary)
+
+            if !results.isEmpty {
+                ListSection(title: model.libraryQuery.isEmpty ? "Skills" : "Matches", note: results.count.formatted()) {
+                    ForEach(results) { entry in
+                        SelectableRow(id: entry.id, selection: $model.librarySelection) {
+                            LibraryRow(entry: entry)
+                        }
+                    }
+                }
             }
         }
-        .listStyle(.inset)
         .navigationTitle(model.libraryFilter.title)
         .searchable(text: $model.libraryQuery, prompt: "Search name, description, groups")
         .overlay {
@@ -62,6 +70,17 @@ struct LibraryList: View {
             guard let skill = model.librarySelectedSkill else { return .ignored }
             model.copyReference(skill)
             return .handled
+        }
+    }
+
+    private var summary: String {
+        switch model.libraryFilter {
+        case .all:
+            return "Every SKILL.md on this Mac, from every agent. Return copies a reference, or drag one into a prompt."
+        case .source(let source):
+            return "Skills Clove found in \(source.sectionTitle)."
+        case .tag:
+            return "A group you made. Copy Group copies every reference in it at once."
         }
     }
 

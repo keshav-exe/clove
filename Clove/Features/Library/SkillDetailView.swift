@@ -45,7 +45,6 @@ struct SkillDetailView: View {
             .padding(Metrics.spacingXL)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .scrollClipDisabled()
         .navigationTitle(entry.displayName)
         .toolbarTitleDisplayMode(.inline)
         .toolbar {

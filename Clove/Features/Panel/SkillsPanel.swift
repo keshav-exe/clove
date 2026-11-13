@@ -34,14 +34,6 @@ struct SkillsPanel: View {
 
             PanelFooter()
         }
-        .frame(
-            minWidth: Metrics.panelMinWidth,
-            idealWidth: Metrics.panelWidth,
-            maxWidth: Metrics.panelMaxWidth,
-            minHeight: Metrics.panelMinHeight,
-            idealHeight: Metrics.panelHeight,
-            maxHeight: Metrics.panelMaxHeight
-        )
         .task {
             await model.startIfNeeded()
             focus = .search
