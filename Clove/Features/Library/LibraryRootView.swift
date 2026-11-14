@@ -3,20 +3,19 @@ import SwiftUI
 struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
-    @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
 
     var body: some View {
         Group {
-            if model.license.isUnlocked {
+            if isReady {
                 unlocked
                     .transition(.opacity)
             } else {
-                ActivationView()
+                OnboardingView()
                     .transition(.opacity)
             }
         }
-        .animation(.smooth(duration: 0.4), value: model.license.isUnlocked)
+        .animation(.smooth(duration: 0.4), value: isReady)
         .frame(minWidth: Metrics.windowMinWidth, minHeight: Metrics.windowMinHeight)
         .background(LibraryWindowAccessor())
         .onAppear {
@@ -32,6 +31,12 @@ struct LibraryRootView: View {
         }
     }
 
+    /// Setup is done and this Mac has a license. Until then the window shows
+    /// the guide, or just its license step for a Mac set up before.
+    private var isReady: Bool {
+        model.license.isUnlocked && model.settings.hasCompletedOnboarding
+    }
+
     private var unlocked: some View {
         @Bindable var model = model
 
@@ -43,11 +48,6 @@ struct LibraryRootView: View {
             .sheet(isPresented: $model.isShowingSkillBuilder) {
                 NewSkillSheet()
                     .environment(model)
-            }
-            .sheet(isPresented: $isShowingOnboarding) {
-                OnboardingFlow()
-                    .environment(model)
-                    .interactiveDismissDisabled()
             }
             .sheet(item: $whatsNewRelease) { release in
                 WhatsNewSheet(release: release) {
@@ -114,10 +114,6 @@ struct LibraryRootView: View {
     }
 
     private func presentInitialSheets() {
-        if !model.settings.hasCompletedOnboarding {
-            isShowingOnboarding = true
-            return
-        }
         whatsNewRelease = WhatsNewCatalog.unseenRelease(
             lastSeenVersion: model.settings.lastSeenWhatsNewVersion
         )
