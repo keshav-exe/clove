@@ -41,5 +41,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environment(AppModel.preview)
-        .environment(UpdateService(settings: AppModel.preview.settings))
+        .environment(UpdateService())
 }

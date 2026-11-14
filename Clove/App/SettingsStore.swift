@@ -81,17 +81,8 @@ final class SettingsStore {
     }
 
     /// Update the user dismissed until a newer version ships.
-    var skippedUpdateVersion: String? {
-        didSet { defaults.set(skippedUpdateVersion, forKey: Keys.skippedUpdateVersion) }
-    }
 
-    var pendingUpdateURL: String? {
-        didSet { defaults.set(pendingUpdateURL, forKey: Keys.pendingUpdateURL) }
-    }
 
-    var installUpdateOnLaunch: Bool {
-        didSet { defaults.set(installUpdateOnLaunch, forKey: Keys.installUpdateOnLaunch) }
-    }
 
     /// Agents a skill from skills.sh is linked into when installed.
     var installTargets: Set<AgentTarget> {
@@ -122,9 +113,6 @@ final class SettingsStore {
         panelBlock = defaults.string(forKey: Keys.panelBlock).flatMap(PanelBlock.init(rawValue:)) ?? .skills
         menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
         lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
-        skippedUpdateVersion = defaults.string(forKey: Keys.skippedUpdateVersion)
-        pendingUpdateURL = defaults.string(forKey: Keys.pendingUpdateURL)
-        installUpdateOnLaunch = defaults.bool(forKey: Keys.installUpdateOnLaunch)
         hotKey = Self.loadHotKey(from: defaults)
         installTargets = Self.loadInstallTargets(from: defaults)
     }
@@ -199,9 +187,6 @@ final class SettingsStore {
         static let panelBlock = "panelBlock"
         static let menuBarStat = "menuBarStat"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
-        static let skippedUpdateVersion = "skippedUpdateVersion"
-        static let pendingUpdateURL = "pendingUpdateURL"
-        static let installUpdateOnLaunch = "installUpdateOnLaunch"
         static let installTargets = "installTargets"
     }
 }

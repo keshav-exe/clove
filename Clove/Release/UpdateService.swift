@@ -1,74 +1,62 @@
 import AppKit
-import Foundation
 import Observation
+import Sparkle
 
+/// Updates through Sparkle, the way most Mac apps outside the App Store do it.
+/// Clove checks once a day, downloads in the background, and installs when it
+/// quits. Every update is checked against the public key in Info.plist first.
 @MainActor
 @Observable
 final class UpdateService {
-    var availableUpdate: UpdateManifest?
-    var isChecking = false
-    var lastCheckError: String?
+    @ObservationIgnored private let controller = SPUStandardUpdaterController(
+        startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil
+    )
+    @ObservationIgnored private var observation: NSKeyValueObservation?
 
-    private let settings: SettingsStore
+    private(set) var canCheck = false
 
-    init(settings: SettingsStore) {
-        self.settings = settings
-    }
+    private var updater: SPUUpdater { controller.updater }
 
-    func checkForUpdates(userInitiated: Bool = false) async {
-        guard let manifestURL = ReleaseConfiguration.latestReleaseURL else {
-            if userInitiated {
-                lastCheckError = "Updates are not configured for this build."
-            }
+    /// Starts the updater. Debug builds stay off: they aren't signed for
+    /// release and would offer to replace themselves.
+    func start() {
+        #if DEBUG
+        return
+        #else
+        do {
+            try updater.start()
+        } catch {
+            // A bad feed URL or key in Info.plist. Check for Updates stays disabled.
             return
         }
-
-        isChecking = true
-        lastCheckError = nil
-        defer { isChecking = false }
-
-        do {
-            let manifest = try await UpdateManifestLoader.load(from: manifestURL)
-            guard VersionCompare.isNewer(manifest.version, than: AppVersion.short) else {
-                availableUpdate = nil
-                return
+        canCheck = updater.canCheckForUpdates
+        observation = updater.observe(\.canCheckForUpdates) { [weak self] _, _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.canCheck = self.updater.canCheckForUpdates
             }
-            guard manifest.version != settings.skippedUpdateVersion else {
-                availableUpdate = nil
-                return
-            }
-            availableUpdate = manifest
-        } catch {
-            if userInitiated {
-                lastCheckError = error.localizedDescription
+        }
+        #endif
+    }
+
+    /// Checking and installing on their own, as one choice.
+    var isAutomatic: Bool {
+        get {
+            access(keyPath: \.isAutomatic)
+            return updater.automaticallyChecksForUpdates && updater.automaticallyDownloadsUpdates
+        }
+        set {
+            withMutation(keyPath: \.isAutomatic) {
+                updater.automaticallyChecksForUpdates = newValue
+                updater.automaticallyDownloadsUpdates = newValue
             }
         }
     }
 
-    func installNow(_ update: UpdateManifest) {
-        settings.pendingUpdateURL = update.downloadURL.absoluteString
-        settings.installUpdateOnLaunch = false
-        NSWorkspace.shared.open(update.downloadURL)
-        availableUpdate = nil
-    }
-
-    func installOnNextLaunch(_ update: UpdateManifest) {
-        settings.pendingUpdateURL = update.downloadURL.absoluteString
-        settings.installUpdateOnLaunch = true
-        settings.skippedUpdateVersion = update.version
-        availableUpdate = nil
-    }
-
-    func dismiss(_ update: UpdateManifest) {
-        settings.skippedUpdateVersion = update.version
-        availableUpdate = nil
-    }
-
-    func applyDeferredInstallIfNeeded() {
-        guard settings.installUpdateOnLaunch,
-              let raw = settings.pendingUpdateURL,
-              let url = URL(string: raw) else { return }
-        NSWorkspace.shared.open(url)
-        settings.installUpdateOnLaunch = false
+    /// Sparkle's own window: it says whether you're up to date, or shows the
+    /// release notes with Install and Later.
+    func checkNow() {
+        NSApp.activate()
+        controller.checkForUpdates(nil)
     }
 }

@@ -67,10 +67,19 @@ xattr -cr "$APP"
 
 if [[ -n "${SIGN_ID:-}" ]]; then
   echo "-> Signing with ${SIGN_ID}..."
-  codesign --force --options runtime --timestamp \
-    --entitlements "$ENTITLEMENTS" \
-    --sign "${SIGN_ID}" \
-    "$APP"
+  sign() { codesign --force --options runtime --timestamp --sign "${SIGN_ID}" "$@"; }
+  # Inside out: Sparkle's helpers, then its framework, then the app. The
+  # Downloader keeps its own entitlements (it's the one that goes online).
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+  if [[ -d "$SPARKLE" ]]; then
+    sign "$SPARKLE/XPCServices/Installer.xpc"
+    sign --preserve-metadata=entitlements "$SPARKLE/XPCServices/Downloader.xpc"
+    sign "$SPARKLE/Autoupdate"
+    sign "$SPARKLE/Updater.app"
+    sign "$APP/Contents/Frameworks/Sparkle.framework"
+  fi
+  sign --entitlements "$ENTITLEMENTS" "$APP"
+  codesign --verify --deep --strict "$APP"
 else
   echo "-> Verifying existing signature..."
   codesign --verify --deep --strict --verbose=2 "$APP"

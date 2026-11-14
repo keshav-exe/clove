@@ -2,11 +2,9 @@ import SwiftUI
 
 struct LibraryRootView: View {
     @Environment(AppModel.self) private var model
-    @Environment(UpdateService.self) private var updates
     @Environment(\.openWindow) private var openWindow
     @State private var isShowingOnboarding = false
     @State private var whatsNewRelease: WhatsNewRelease?
-    @State private var offeredUpdate: UpdateManifest?
 
     var body: some View {
         Group {
@@ -40,13 +38,7 @@ struct LibraryRootView: View {
         return librarySplit
             .task {
                 await model.startIfNeeded()
-                await updates.checkForUpdates()
                 presentInitialSheets()
-            }
-            .onChange(of: updates.availableUpdate) {
-                if offeredUpdate == nil {
-                    offeredUpdate = updates.availableUpdate
-                }
             }
             .sheet(isPresented: $model.isShowingSkillBuilder) {
                 NewSkillSheet()
@@ -61,10 +53,6 @@ struct LibraryRootView: View {
                 WhatsNewSheet(release: release) {
                     model.settings.lastSeenWhatsNewVersion = release.version
                 }
-            }
-            .sheet(item: $offeredUpdate, onDismiss: skipUpdateIfStillPending) { update in
-                UpdateAvailableSheet(update: update)
-                    .environment(updates)
             }
     }
 
@@ -125,18 +113,9 @@ struct LibraryRootView: View {
         Task { await model.manager.confirmPendingConflict() }
     }
 
-    private func skipUpdateIfStillPending() {
-        guard let update = updates.availableUpdate else { return }
-        updates.dismiss(update)
-    }
-
     private func presentInitialSheets() {
         if !model.settings.hasCompletedOnboarding {
             isShowingOnboarding = true
-            return
-        }
-        if let update = updates.availableUpdate {
-            offeredUpdate = update
             return
         }
         whatsNewRelease = WhatsNewCatalog.unseenRelease(
@@ -148,5 +127,5 @@ struct LibraryRootView: View {
 #Preview {
     LibraryRootView()
         .environment(AppModel.preview)
-        .environment(UpdateService(settings: AppModel.preview.settings))
+        .environment(UpdateService())
 }

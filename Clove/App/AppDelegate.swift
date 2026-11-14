@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
-    lazy var updates = UpdateService(settings: model.settings)
+    lazy var updates = UpdateService()
 
     private var panel: PanelController?
     private var statusItem: StatusItemController?
@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applySettings()
         watchSettings()
         InsertTarget.startObserving()
-        updates.applyDeferredInstallIfNeeded()
+        updates.start()
 
         NotificationCenter.default.addObserver(
             self,
@@ -142,8 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             item.onCheckForUpdates = { [weak self] in
                 guard let self else { return }
-                WindowBridge.shared.showLibraryWindow()
-                Task { await self.updates.checkForUpdates(userInitiated: true) }
+                self.updates.checkNow()
             }
             item.panelShortcut = { [weak self] in
                 guard let settings = self?.model.settings, settings.hotKeyEnabled else { return nil }

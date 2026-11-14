@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Ships a Clove release from this Mac in one go:
 # version bump, signed and notarized DMG, git tag, and a GitHub release with the
-# DMG, its checksums, and install.sh (what the README's curl line fetches).
-# Clove reads the latest GitHub release to offer updates, so that's all it takes.
+# DMG, its checksums, the signed Sparkle feed (appcast.xml), and install.sh.
+# Clove reads appcast.xml from the latest release to update itself.
 #
 #   ./tools/release.sh 2.1                  notes written by GitHub from the commits
 #   ./tools/release.sh 2.1 notes.md         notes from a file
@@ -54,6 +54,22 @@ echo "-> Version $VERSION ($NEXT_BUILD) committed"
 LICENSED=1 SIGN_ID="$SIGN_ID" NOTARIZE=1 NOTARY_PROFILE="$NOTARY_PROFILE" ./tools/MakeDMG.sh
 [[ -f "$DMG" ]] || fail "Expected $DMG after the build."
 
+# The update feed Clove reads through Sparkle, signed with the EdDSA key in this
+# Mac's keychain (made once with `generate_keys --account clove`). Clove installs
+# only updates that key signed. The notes come from the notes file, as HTML.
+SPARKLE_BIN="$(find build/DerivedData/SourcePackages/artifacts -type d -path '*Sparkle/bin' | head -1)"
+[[ -x "$SPARKLE_BIN/generate_appcast" ]] || fail "Sparkle's tools weren't found after the build."
+FEED_DIR="$(mktemp -d)"
+cp "$DMG" "$FEED_DIR/"
+if [[ -n "$NOTES" ]]; then
+  python3 tools/notes-html.py "$NOTES" > "$FEED_DIR/Clove-$VERSION.html"
+fi
+"$SPARKLE_BIN/generate_appcast" --account clove --embed-release-notes \
+  --download-url-prefix "https://github.com/keshav-exe/clove/releases/download/$TAG/" \
+  --full-release-notes-url "https://clove.kshv.me/changelog" \
+  -o dist/appcast.xml "$FEED_DIR"
+grep -q "sparkle:edSignature" dist/appcast.xml || fail "The update feed isn't signed."
+
 # What `curl ... install.sh | bash` checks the download against.
 CHECKSUMS="dist/checksums.txt"
 (cd dist && shasum -a 256 "$(basename "$DMG")") > "$CHECKSUMS"
@@ -61,9 +77,12 @@ CHECKSUMS="dist/checksums.txt"
 git tag "$TAG"
 git push -q origin HEAD "$TAG"
 
-NOTE_ARGS=(--generate-notes)
-[[ -n "$NOTES" ]] && NOTE_ARGS=(--notes-file "$NOTES")
-gh release create "$TAG" "$DMG" "$CHECKSUMS" tools/install.sh --title "Clove $VERSION" "${NOTE_ARGS[@]}"
+# Copies from 3.1 and earlier read this text in a small window that shows it
+# raw, so it's the notes' first paragraph and a link. The full notes are in the
+# update feed and on the changelog.
+SHORT="Clove $VERSION is out. Full notes: https://clove.kshv.me/changelog"
+[[ -n "$NOTES" ]] && SHORT="$(awk 'NF { print; exit }' "$NOTES") Full notes: https://clove.kshv.me/changelog"
+gh release create "$TAG" "$DMG" "$CHECKSUMS" dist/appcast.xml tools/install.sh --title "Clove $VERSION" --notes "$SHORT"
 
 echo ""
 echo "ok Clove $VERSION is live. Every copy of Clove will offer it on its next check."

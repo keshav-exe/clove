@@ -12,7 +12,7 @@ Skills, instruction files, rules, commands, subagents, MCP servers, hooks, permi
 curl -fsSL https://github.com/keshav-exe/clove/releases/latest/download/install.sh | bash
 ```
 
-[**Download for Mac**](https://github.com/keshav-exe/clove/releases/latest) · [Website](https://clove.kshv.me) · [What's new in 3.1](https://github.com/keshav-exe/clove/releases/tag/v3.1)
+[**Download for Mac**](https://github.com/keshav-exe/clove/releases/latest) · [Website](https://clove.kshv.me) · [What's new in 3.2](https://github.com/keshav-exe/clove/releases/tag/v3.2)
 
 Open source · MIT · Lifetime license for the signed app · No account · macOS 26
 
@@ -111,7 +111,7 @@ From Terminal:
 curl -fsSL https://github.com/keshav-exe/clove/releases/latest/download/install.sh | bash
 ```
 
-The script downloads the latest release and checks it against the release's checksums, Clove's Developer ID team, and Apple's notarization before it copies anything into Applications. Run it again to update. Add `bash -s -- --version 3.0` to pin a version, or `bash -s -- --uninstall` to remove the app (settings and groups stay).
+The script downloads the latest release and checks it against the release's checksums, Clove's Developer ID team, and Apple's notarization before it copies anything into Applications. After that, Clove updates itself. Add `bash -s -- --version 3.0` to pin a version, or `bash -s -- --uninstall` to remove the app (settings and groups stay).
 
 Or download `Clove-<version>.dmg` from [Releases](https://github.com/keshav-exe/clove/releases/latest), open it, and drag Clove to Applications. Releases are signed and notarized, so it opens like any other app.
 
@@ -136,7 +136,7 @@ Xcode 26 and the macOS 26 SDK. Builds from source skip the license check, so the
 To ship a release from a Mac with the Developer ID certificate:
 
 ```bash
-./tools/release.sh 3.1 docs/release-notes/3.1.md
+./tools/release.sh 3.2 docs/release-notes/3.2.md
 ```
 
 It bumps the version, builds and signs the app, notarizes the `.dmg`, tags the version, and publishes the GitHub release with the `.dmg`, `checksums.txt`, and `install.sh` attached, which is what the `curl` line above fetches. It needs `gh`, `create-dmg`, and a notary profile saved with `xcrun notarytool store-credentials AC_PASSWORD`.

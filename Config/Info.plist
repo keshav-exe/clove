@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Updates, through Sparkle. Clove installs only what the matching private key signed;
+	     that key lives in the release Mac's keychain (generate_keys --account clove). -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/keshav-exe/clove/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>oZ/p6ZBV2yswk2F1f6F4XNV110G+FHL/NOvt+tWUmTw=</string>
+	<!-- Check once a day, download in the background, install when Clove quits. -->
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+</dict>
+</plist>

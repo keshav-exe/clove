@@ -228,6 +228,24 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.2",
+            title: "What's New in Clove",
+            subtitle: "Clove now keeps itself up to date.",
+            symbolName: "arrow.down.circle",
+            features: [
+                FeatureHighlight(
+                    symbolName: "arrow.down.circle",
+                    title: "Automatic Updates",
+                    detail: "Clove checks once a day, downloads in the background, and installs when you quit. Settings, About turns it off or checks now."
+                ),
+                FeatureHighlight(
+                    symbolName: "checkmark.seal",
+                    title: "Signed Updates",
+                    detail: "Every update is signed, and Clove won't install one that isn't."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
