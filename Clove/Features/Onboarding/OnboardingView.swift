@@ -4,7 +4,7 @@ import SwiftUI
 /// and choices on the left, a small scene on the right showing what the step
 /// is about. It fills the main window until setup is done.
 enum OnboardingStep: Int, CaseIterable {
-    case welcome, license, permissions, shortcut, ready
+    case welcome, license, permissions, placement, shortcut, ready
 
     /// A first run walks every step. A Mac that finished setup but has no
     /// license (a deactivated key, say) sees the license step alone.
@@ -48,6 +48,7 @@ struct OnboardingView: View {
                     case .welcome: WelcomeStep()
                     case .license: LicenseStep(onActivated: advance)
                     case .permissions: PermissionsStep()
+                    case .placement: PlacementStep()
                     case .shortcut: ShortcutStep()
                     case .ready: ReadyStep()
                     }

@@ -8,16 +8,12 @@ final class SettingsStore {
         didSet { defaults.set(hasCompletedOnboarding, forKey: Keys.onboarded) }
     }
 
-    var showMenuBarIcon: Bool {
-        didSet { defaults.set(showMenuBarIcon, forKey: Keys.showMenuBarIcon) }
-    }
-
-    /// Menu-bar-only mode. Requires the menu bar icon, otherwise the app has no way back.
+    /// Notch-only mode: the notch is always there to bring Clove back.
     var hideDockIcon: Bool {
         didSet { defaults.set(hideDockIcon, forKey: Keys.hideDockIcon) }
     }
 
-    /// Closing the library window hides it and keeps Clove in the menu bar.
+    /// Closing the library window hides it and keeps Clove running in the notch.
     var keepRunningInMenuBar: Bool {
         didSet { defaults.set(keepRunningInMenuBar, forKey: Keys.keepRunningInMenuBar) }
     }
@@ -55,9 +51,45 @@ final class SettingsStore {
         didSet { defaults.set(savedGroupNames, forKey: Keys.savedGroupNames) }
     }
 
-    /// What sits next to the menu bar icon, if anything.
+    /// Where Clove lives: in the notch, or as a menu bar icon.
+    var accessMode: AccessMode {
+        didSet { defaults.set(accessMode.rawValue, forKey: Keys.accessMode) }
+    }
+
+    /// False until someone (or onboarding) picked a mode; upgraders from the
+    /// menu bar era start here.
+    var hasChosenAccessMode: Bool {
+        defaults.object(forKey: Keys.accessMode) != nil
+    }
+
+    /// The number beside the menu bar icon, in menu bar mode.
     var menuBarStat: MenuBarStat {
         didSet { defaults.set(menuBarStat.rawValue, forKey: Keys.menuBarStat) }
+    }
+
+    /// Hovering the notch opens a glance at what's live.
+    var notchOpensOnHover: Bool {
+        didSet { defaults.set(notchOpensOnHover, forKey: Keys.notchOpensOnHover) }
+    }
+
+    /// The open island turns to Liquid Glass below the notch, instead of solid black.
+    var notchGlass: Bool {
+        didSet { defaults.set(notchGlass, forKey: Keys.notchGlass) }
+    }
+
+    /// The notch grows for a moment when an agent finishes a turn.
+    var notchAgentMoments: Bool {
+        didSet { defaults.set(notchAgentMoments, forKey: Keys.notchAgentMoments) }
+    }
+
+    /// ...when a dev server starts or stops.
+    var notchServerMoments: Bool {
+        didSet { defaults.set(notchServerMoments, forKey: Keys.notchServerMoments) }
+    }
+
+    /// ...when the disk runs low.
+    var notchStorageMoments: Bool {
+        didSet { defaults.set(notchStorageMoments, forKey: Keys.notchStorageMoments) }
     }
 
     /// The blocks in the menu bar panel, in the order their tiles sit.
@@ -97,7 +129,6 @@ final class SettingsStore {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         hasCompletedOnboarding = defaults.bool(forKey: Keys.onboarded)
-        showMenuBarIcon = defaults.flag(Keys.showMenuBarIcon, default: true)
         hideDockIcon = defaults.flag(Keys.hideDockIcon, default: true)
         keepRunningInMenuBar = defaults.flag(Keys.keepRunningInMenuBar, default: true)
         keepPanelOnTop = defaults.flag(Keys.keepPanelOnTop, default: false)
@@ -108,10 +139,25 @@ final class SettingsStore {
         pinnedPanelFrame = defaults.string(forKey: Keys.pinnedPanelFrame)
         savedGroupNames = defaults.stringArray(forKey: Keys.savedGroupNames) ?? []
         pinnedGroups = defaults.stringArray(forKey: Keys.pinnedGroups) ?? []
-        let blocks = (defaults.stringArray(forKey: Keys.panelBlocks) ?? []).compactMap(PanelBlock.init(rawValue:))
-        panelBlocks = blocks.isEmpty ? PanelBlock.defaults : blocks
+        var blocks = (defaults.stringArray(forKey: Keys.panelBlocks) ?? []).compactMap(PanelBlock.init(rawValue:))
+        // Sets saved before the notch get Now once; taking it out later sticks.
+        if !defaults.bool(forKey: Keys.offeredNowBlock) {
+            if !blocks.isEmpty, !blocks.contains(.now) {
+                blocks.insert(.now, at: 0)
+                // didSet doesn't run in init, so save it here.
+                defaults.set(blocks.map(\.rawValue), forKey: Keys.panelBlocks)
+            }
+            defaults.set(true, forKey: Keys.offeredNowBlock)
+        }
+        panelBlocks = blocks.isEmpty ? PanelBlock.defaults : Array(blocks.prefix(PanelBlock.maxTabs))
         panelBlock = defaults.string(forKey: Keys.panelBlock).flatMap(PanelBlock.init(rawValue:)) ?? .skills
+        notchOpensOnHover = defaults.flag(Keys.notchOpensOnHover, default: true)
+        accessMode = defaults.string(forKey: Keys.accessMode).flatMap(AccessMode.init(rawValue:)) ?? .notch
         menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
+        notchGlass = defaults.flag(Keys.notchGlass, default: true)
+        notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
+        notchServerMoments = defaults.flag(Keys.notchServerMoments, default: true)
+        notchStorageMoments = defaults.flag(Keys.notchStorageMoments, default: true)
         lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
         hotKey = Self.loadHotKey(from: defaults)
         installTargets = Self.loadInstallTargets(from: defaults)
@@ -125,9 +171,6 @@ final class SettingsStore {
         )
     }
 
-    var canHideDockIcon: Bool {
-        showMenuBarIcon
-    }
 
     func addProjectRoot(_ url: URL) {
         let path = url.path(percentEncoded: false)
@@ -171,7 +214,6 @@ final class SettingsStore {
 
     private enum Keys {
         static let onboarded = "hasCompletedOnboarding"
-        static let showMenuBarIcon = "showMenuBarIcon"
         static let hideDockIcon = "hideDockIcon"
         static let keepRunningInMenuBar = "keepRunningInMenuBar"
         static let keepPanelOnTop = "keepPanelOnTop"
@@ -185,7 +227,14 @@ final class SettingsStore {
         static let pinnedGroups = "pinnedGroups"
         static let panelBlocks = "panelBlocks"
         static let panelBlock = "panelBlock"
+        static let notchOpensOnHover = "notchOpensOnHover"
+        static let accessMode = "accessMode"
         static let menuBarStat = "menuBarStat"
+        static let offeredNowBlock = "offeredNowBlock"
+        static let notchGlass = "notchGlass"
+        static let notchAgentMoments = "notchAgentMoments"
+        static let notchServerMoments = "notchServerMoments"
+        static let notchStorageMoments = "notchStorageMoments"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
         static let installTargets = "installTargets"
     }

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+/// The menu bar mode's panel window: it drops from the status item.
 final class FloatingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -10,10 +11,10 @@ final class FloatingPanel: NSPanel {
             contentRect: NSRect(
                 x: 0,
                 y: 0,
-                width: Metrics.panelWidth,
-                height: Metrics.panelHeight
+                width: MenuBarPanel.size.width,
+                height: MenuBarPanel.size.height
             ),
-            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .resizable],
+            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -33,8 +34,6 @@ final class FloatingPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         animationBehavior = .utilityWindow
-        minSize = NSSize(width: Metrics.panelMinWidth, height: Metrics.panelMinHeight)
-        maxSize = NSSize(width: Metrics.panelMaxWidth, height: Metrics.panelMaxHeight)
         standardWindowButton(.closeButton)?.isHidden = true
         standardWindowButton(.miniaturizeButton)?.isHidden = true
         standardWindowButton(.zoomButton)?.isHidden = true

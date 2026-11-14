@@ -37,6 +37,10 @@ struct SectionPage: View {
                         secrets.isShowingFindings = false
                     }
                 }) { SecretDetail() }
+        case .worktrees:
+            @Bindable var worktrees = model.worktrees
+            WorktreesPage()
+                .inspected(isPresented: presence($worktrees.selection)) { WorktreeDetail() }
         case .running:
             @Bindable var running = model.running
             RunningList()

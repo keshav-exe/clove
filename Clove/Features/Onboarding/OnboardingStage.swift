@@ -2,16 +2,25 @@ import SwiftUI
 
 /// The right half of the guide: a still scene of what the step is about.
 struct OnboardingStage: View {
+    @Environment(AppModel.self) private var model
     let step: OnboardingStep
 
     var body: some View {
         ZStack {
             Palette.surfaceMuted
 
-            scene
-                .scaleEffect(1.4)
-                .id(step)
-                .arrives()
+            if step == .placement {
+                // Live, not a still: the motion is the point.
+                NotchDemo(scene: model.settings.accessMode == .notch ? .peek : .menuBar)
+                    .id(model.settings.accessMode)
+                    .padding(32)
+                    .arrives()
+            } else {
+                scene
+                    .scaleEffect(1.4)
+                    .id(step)
+                    .arrives()
+            }
         }
         .overlay(alignment: .leading) {
             Rectangle()
@@ -42,6 +51,8 @@ struct OnboardingStage: View {
             } front: {
                 MockSkillCard(reference: "/swiftui-pro", summary: "Typed into your prompt when you press Return.", badges: [("Insert", Palette.accent)])
             }
+        case .placement:
+            EmptyView()
         case .shortcut:
             MockStack {
                 MockSkillCard(reference: "/review", summary: "Pinned beside your editor.", badges: [("Panel", .gray)])

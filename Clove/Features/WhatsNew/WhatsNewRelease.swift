@@ -7,6 +7,8 @@ struct WhatsNewRelease: Identifiable, Hashable, Sendable {
     let subtitle: String
     let symbolName: String
     let features: [FeatureHighlight]
+    /// Shown as a short, animated walkthrough instead of a list.
+    var isNotchTutorial = false
 }
 
 enum WhatsNewCatalog {
@@ -245,6 +247,14 @@ enum WhatsNewCatalog {
                     detail: "Every update is signed, and Clove won't install one that isn't."
                 ),
             ]
+        ),
+        WhatsNewRelease(
+            version: "3.3",
+            title: "Clove Moved into the Notch",
+            subtitle: "Your agents at work, a hover away.",
+            symbolName: "rectangle.topthird.inset.filled",
+            features: [],
+            isNotchTutorial: true
         ),
     ]
 

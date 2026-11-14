@@ -23,6 +23,7 @@ struct LibrarySidebar: View {
                 StorageSidebarRow()
                 CleanupSidebarRow()
                 RunningSidebarRow()
+                WorktreesSidebarRow()
             }
 
             Section("Skills", isExpanded: $showsSkills) {

@@ -6,13 +6,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     lazy var updates = UpdateService()
 
-    private var panel: PanelController?
-    private var statusItem: StatusItemController?
+    private var notch: NotchController?
+    private var live: NotchLiveMonitor?
     private let hotKeys = HotKeyCenter()
+    private let menu = CloveMenu()
+    /// Menu bar mode only.
+    private var statusItem: StatusItemController?
+    private var panel: PanelController?
+    private var island: NotchModel?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let panel = PanelController(model: model)
-        self.panel = panel
+        let island = NotchModel(agents: AgentActivityStore(), settings: model.settings)
+        self.island = island
+        let notch = NotchController(model: model, notch: island, menu: menu)
+        notch.onLocked = {
+            NSApp.activate()
+            LibraryWindowTracker.shared.showLibraryWindow()
+        }
+        configureMenu(menu)
+        self.notch = notch
+
+        let live = NotchLiveMonitor(model: model, notch: island)
+        live.openStorage = { [weak self] in self?.openPanel(on: .storage) }
+        self.live = live
 
         WindowBridge.shared.toggleQuickPanel = { [weak self] in
             self?.togglePanel()
@@ -30,6 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Upgrading from the menu bar era: take the notch, unless another
+        // notch app already has it. What's New shows the choice either way.
+        if model.settings.hasCompletedOnboarding, !model.settings.hasChosenAccessMode {
+            model.settings.accessMode = NotchNeighbors.suggestedMode
+        }
+
         applySettings()
         watchSettings()
         InsertTarget.startObserving()
@@ -42,24 +64,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
-        // Status items can fail to appear if created before the run loop settles.
-        DispatchQueue.main.async { [weak self] in
-            self?.applyStatusItem()
-        }
-
         NSApp.activate()
 
         #if DEBUG
         // `-panelPreview <block>`: open the panel pinned on a block, for screenshots.
         if let index = CommandLine.arguments.firstIndex(of: "-panelPreview") {
             let name = CommandLine.arguments.indices.contains(index + 1) ? CommandLine.arguments[index + 1] : ""
-            if let block = PanelBlock(rawValue: name) {
-                model.settings.setBlock(block, included: true)
-                model.settings.panelBlock = block
-            }
+            let block = PanelBlock(rawValue: name)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.notch?.setPinned(true)
                 self?.panel?.setPinned(true)
-                self?.panel?.show()
+                self?.openPanel(on: block)
             }
         }
         #endif
@@ -81,12 +96,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings
 
     private func applySettings() {
-        LibraryWindowTracker.shared.keepRunningInMenuBar = model.settings.keepRunningInMenuBar
+        let settings = model.settings
+        LibraryWindowTracker.shared.keepRunningInMenuBar = settings.keepRunningInMenuBar
         applyActivationPolicy()
-        applyStatusItem()
         applyHotKey()
-        applyMenuBarStat()
-        panel?.setPinned(model.settings.keepPanelOnTop)
+        applyMode()
+        if settings.hasCompletedOnboarding {
+            live?.start()
+        } else {
+            live?.stop()
+        }
     }
 
     private func applyActivationPolicy() {
@@ -95,7 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || hasVisibleRegularWindow
 
         let next: NSApplication.ActivationPolicy
-        if !settings.hasCompletedOnboarding || !settings.showMenuBarIcon {
+        if !settings.hasCompletedOnboarding {
             next = .regular
         } else if wantsMenuBar {
             // Library/settings must own the menu bar or Clove → Settings never exists.
@@ -122,53 +141,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func applyStatusItem() {
-        guard model.settings.showMenuBarIcon else {
+    // MARK: - Mode
+
+    /// Shows Clove where you chose: the notch, or an icon and panel in the
+    /// menu bar. Switching takes effect at once; the other one is torn down.
+    private func applyMode() {
+        let settings = model.settings
+        let onboarded = settings.hasCompletedOnboarding
+        switch settings.accessMode {
+        case .notch:
             statusItem?.remove()
             statusItem = nil
-            return
-        }
-        if statusItem == nil {
-            let item = StatusItemController()
-            item.onToggle = { [weak self] in
-                self?.togglePanel()
+            panel?.tearDown()
+            panel = nil
+            statTask?.cancel()
+            notch?.setPinned(settings.keepPanelOnTop)
+            notch?.setVisible(onboarded)
+        case .menuBar:
+            notch?.setVisible(false)
+            guard onboarded else { return }
+            if panel == nil, let island {
+                panel = PanelController(model: model, notch: island)
             }
-            item.onShow = { [weak self] destination in
-                WindowBridge.shared.showLibraryWindow()
-                self?.model.show(destination)
+            panel?.setPinned(settings.keepPanelOnTop)
+            if statusItem == nil {
+                let item = StatusItemController(menu: menu)
+                item.onToggle = { [weak self] in self?.togglePanel() }
+                statusItem = item
             }
-            item.onSettings = {
-                WindowBridge.shared.showSettings()
-            }
-            item.onCheckForUpdates = { [weak self] in
-                guard let self else { return }
-                self.updates.checkNow()
-            }
-            item.panelShortcut = { [weak self] in
-                guard let settings = self?.model.settings, settings.hotKeyEnabled else { return nil }
-                return settings.hotKey
-            }
-            item.badge = { [weak self] destination in
-                guard let model = self?.model else { return nil }
-                switch destination {
-                case .cleanup:
-                    let count = model.cleanupCandidates.count
-                    return count == 0 ? nil : count.formatted(.number)
-                case .storage:
-                    return model.storage.recommendation.map { StorageFormat.gb(model.storage.clearableBytes(for: $0)) }
-                default:
-                    return nil
-                }
-            }
-            item.onQuit = {
-                NSApp.terminate(nil)
-            }
-            statusItem = item
             applyMenuBarStat()
         }
     }
-
-    // MARK: - Menu bar stat
 
     private var statTask: Task<Void, Never>?
 
@@ -192,6 +195,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func openPanel(on block: PanelBlock?) {
+        switch model.settings.accessMode {
+        case .notch:
+            notch?.open(block)
+        case .menuBar:
+            if let block, model.settings.panelBlocks.contains(block) { model.settings.panelBlock = block }
+            panel?.show(relativeTo: statusItem?.button)
+        }
+    }
+
+    /// The right-click menu on the notch or the icon: every section, like the sidebar.
+    private func configureMenu(_ menu: CloveMenu) {
+        menu.onOpenPanel = { [weak self] in
+            self?.togglePanel()
+        }
+        menu.onShow = { [weak self] destination in
+            self?.notch?.close()
+            self?.panel?.hide()
+            NSApp.activate()
+            WindowBridge.shared.showLibraryWindow()
+            self?.model.show(destination)
+        }
+        menu.onSettings = { [weak self] in
+            self?.notch?.close()
+            self?.panel?.hide()
+            WindowBridge.shared.showSettings()
+        }
+        menu.onCheckForUpdates = { [weak self] in
+            self?.updates.checkNow()
+        }
+        menu.panelShortcut = { [weak self] in
+            guard let settings = self?.model.settings, settings.hotKeyEnabled else { return nil }
+            return settings.hotKey
+        }
+        menu.badge = { [weak self] destination in
+            guard let model = self?.model else { return nil }
+            switch destination {
+            case .cleanup:
+                let count = model.cleanupCandidates.count
+                return count == 0 ? nil : count.formatted(.number)
+            case .storage:
+                return model.storage.recommendation.map { StorageFormat.gb(model.storage.clearableBytes(for: $0)) }
+            default:
+                return nil
+            }
+        }
+        menu.onQuit = {
+            NSApp.terminate(nil)
+        }
+    }
+
     private func applyHotKey() {
         let settings = model.settings
         if settings.hotKeyEnabled, let chord = settings.hotKey {
@@ -207,12 +261,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let settings = model.settings
             _ = settings.hotKey
             _ = settings.hotKeyEnabled
-            _ = settings.showMenuBarIcon
             _ = settings.hideDockIcon
             _ = settings.keepRunningInMenuBar
             _ = settings.keepPanelOnTop
-            _ = settings.menuBarStat
             _ = settings.hasCompletedOnboarding
+            _ = settings.accessMode
+            _ = settings.menuBarStat
         } onChange: { [weak self] in
             Task { @MainActor in
                 self?.applySettings()
@@ -228,6 +282,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             LibraryWindowTracker.shared.showLibraryWindow()
             return
         }
-        panel?.toggle(relativeTo: statusItem?.button)
+        switch model.settings.accessMode {
+        case .notch: notch?.toggle()
+        case .menuBar: panel?.toggle(relativeTo: statusItem?.button)
+        }
     }
 }

@@ -2,9 +2,12 @@ import AppKit
 import SwiftUI
 
 @MainActor
+/// Menu bar mode: the same tabs as the notch, in a glass panel that drops
+/// from the status item.
 final class PanelController {
     private let panel = FloatingPanel()
     private let model: AppModel
+    private let notch: NotchModel
     private var isPinned = false
     private var hasCenteredOnce = false
     private var observers: [any NSObjectProtocol] = []
@@ -15,11 +18,13 @@ final class PanelController {
     private var suppressOutsideDismissUntil: Date?
     private weak var anchorStatusButton: NSView?
 
-    init(model: AppModel) {
+    init(model: AppModel, notch: NotchModel) {
         self.model = model
+        self.notch = notch
 
-        let root = QuickPanel()
+        let root = MenuBarPanel()
             .environment(model)
+            .environment(notch)
             .environment(\.closePanel, ClosePanelAction { [weak self] in
                 self?.hide()
             })
@@ -33,8 +38,7 @@ final class PanelController {
         hosting.layer?.cornerCurve = .continuous
         hosting.layer?.masksToBounds = true
         panel.contentView = hosting
-        panel.setContentSize(NSSize(width: Metrics.panelWidth, height: Metrics.panelHeight))
-        WindowBridge.shared.panelWindow = panel
+        panel.setContentSize(MenuBarPanel.size)
 
         let router = PanelKeyRouter(model: model, panel: panel)
         router.onClose = { [weak self] in
@@ -71,6 +75,7 @@ final class PanelController {
     }
 
     func show(relativeTo statusButton: NSView? = nil) {
+        WindowBridge.shared.panelWindow = panel
         InsertTarget.captureCurrent()
         model.prepareForDisplay()
         model.isPanelVisible = true
@@ -89,6 +94,16 @@ final class PanelController {
         }
 
         panel.makeKey()
+    }
+
+    /// Switching to the notch: close without touching the shared panel state,
+    /// and stop listening for keys and clicks.
+    func tearDown() {
+        removeOutsideClickMonitor()
+        keyRouter?.stop()
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers = []
+        panel.orderOut(nil)
     }
 
     func hide() {
@@ -237,7 +252,7 @@ final class PanelController {
 
     private func observeFrameChanges() {
         let center = NotificationCenter.default
-        for name in [NSWindow.didMoveNotification, NSWindow.didEndLiveResizeNotification] {
+        for name in [NSWindow.didMoveNotification] {
             let token = center.addObserver(forName: name, object: panel, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.saveFrameIfPinned()

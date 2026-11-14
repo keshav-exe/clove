@@ -1,10 +1,10 @@
 import AppKit
 
-/// The menu bar icon. A click toggles the quick access panel; a right click or
-/// Control-click opens a menu with every part of Clove, the way the sidebar has them.
+/// Every part of Clove in one menu, the way the sidebar has them. Opened by
+/// a right click on the notch, or on the menu bar icon.
 @MainActor
-final class StatusItemController: NSObject, NSMenuDelegate {
-    var onToggle: () -> Void = {}
+final class CloveMenu: NSObject, NSMenuDelegate {
+    var onOpenPanel: () -> Void = {}
     var onShow: (SidebarItem) -> Void = { _ in }
     var onSettings: () -> Void = {}
     var onCheckForUpdates: () -> Void = {}
@@ -14,75 +14,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     /// Small counts beside a row, like the sidebar's badges.
     var badge: (SidebarItem) -> String? = { _ in nil }
 
-    private let item: NSStatusItem
-    private let menu = NSMenu()
-
-    var button: NSStatusBarButton? {
-        item.button
-    }
+    /// Built fresh each time it opens. The status item attaches it directly.
+    let menu = NSMenu()
 
     override init() {
-        item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         menu.delegate = self
         menu.autoenablesItems = false
-        configureButton()
     }
 
-    func remove() {
-        NSStatusBar.system.removeStatusItem(item)
-    }
-
-    @objc
-    func handleClick(_ sender: NSStatusBarButton) {
-        guard let event = NSApp.currentEvent else {
-            onToggle()
-            return
-        }
-        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
-            showMenu()
-        } else {
-            onToggle()
-        }
-    }
-
-    private func configureButton() {
-        guard let button else { return }
-        let image = NSImage(resource: .menuBarIcon)
-        image.isTemplate = true
-        image.size = NSSize(width: 18, height: 18)
-        button.image = image
-        button.imagePosition = .imageOnly
-        button.toolTip = "Clove: click for quick access, right-click for everything else"
-        button.setAccessibilityLabel("Clove")
-        button.target = self
-        button.action = #selector(handleClick(_:))
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-    }
-
-    /// A live number beside the icon, in the menu bar's own font with steady
-    /// digits so it doesn't jiggle as it changes. Nil goes back to the icon alone.
-    func setStat(_ reading: (text: String, spoken: String)?) {
-        guard let button else { return }
-        if let reading, !reading.text.isEmpty {
-            button.attributedTitle = NSAttributedString(
-                string: " " + reading.text,
-                attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)]
-            )
-            button.imagePosition = .imageLeading
-            button.setAccessibilityLabel("Clove, \(reading.spoken)")
-        } else {
-            button.title = ""
-            button.imagePosition = .imageOnly
-            button.setAccessibilityLabel(reading.map { "Clove, \($0.spoken)" } ?? "Clove")
-        }
-    }
-
-    private func showMenu() {
-        // Attached only while it shows, so a left click stays free for the panel.
-        item.menu = menu
-        item.button?.performClick(nil)
-        item.menu = nil
+    /// Pops up at a point on screen, in global coordinates.
+    func popUp(at location: CGPoint) {
+        menu.popUp(positioning: nil, at: location, in: nil)
     }
 
     // MARK: - Menu
@@ -90,7 +33,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let panel = add("Quick Access Panel", symbol: "magnifyingglass", to: menu, action: #selector(togglePanel))
+        let panel = add("Open Panel", symbol: "magnifyingglass", to: menu, action: #selector(openPanel))
         // The global shortcut, drawn by AppKit on the right like any menu shortcut.
         if let chord = panelShortcut(), let key = chord.menuKeyEquivalent {
             panel.keyEquivalent = key
@@ -162,8 +105,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     // MARK: - Actions
 
     @objc
-    private func togglePanel() {
-        onToggle()
+    private func openPanel() {
+        onOpenPanel()
     }
 
     @objc

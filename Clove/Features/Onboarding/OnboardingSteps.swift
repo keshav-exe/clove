@@ -253,6 +253,134 @@ struct MacAccess: Equatable {
     }
 }
 
+// MARK: - Where Clove lives
+
+/// Notch or menu bar. With another notch app installed, the menu bar is
+/// picked for you, since two islands can't share one notch; Shotput can.
+struct PlacementStep: View {
+    @Environment(AppModel.self) private var model
+    @AppStorage("onboardingSuggestedMode") private var didSuggest = false
+    @State private var neighbors: [NotchNeighbor] = []
+
+    var body: some View {
+        @Bindable var settings = model.settings
+        let rivals = neighbors.filter { !$0.playsAlong }
+        let partners = neighbors.filter(\.playsAlong)
+        let place = NotchGeometry.hasHardwareNotch ? "notch" : "top of the screen"
+
+        VStack(alignment: .leading, spacing: 0) {
+            StepHeader(
+                title: "Where Clove lives",
+                message: "In the \(place), Clove shows your agents at work and tells you when they're done. In the menu bar, it waits behind an icon until you ask."
+            )
+
+            VStack(spacing: 10) {
+                ModeCard(
+                    mode: .notch,
+                    symbol: "rectangle.topthird.inset.filled",
+                    detail: "Hover to peek, click to search. Grows for a moment when an agent finishes.",
+                    isPicked: settings.accessMode == .notch,
+                    isSuggested: rivals.isEmpty
+                ) { settings.accessMode = .notch }
+                ModeCard(
+                    mode: .menuBar,
+                    symbol: "menubar.rectangle",
+                    detail: "An icon with a panel under it. Leaves the notch to other apps.",
+                    isPicked: settings.accessMode == .menuBar,
+                    isSuggested: !rivals.isEmpty
+                ) { settings.accessMode = .menuBar }
+            }
+
+            if !rivals.isEmpty {
+                Label(
+                    "\(NotchNeighbors.list(rivals)) also \(rivals.count == 1 ? "lives" : "live") in the notch, and two islands can't share it. Pick the notch if you've stopped using \(rivals.count == 1 ? "it" : "them").",
+                    systemImage: "rectangle.on.rectangle"
+                )
+                .font(.callout)
+                .foregroundStyle(Palette.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 16)
+            } else if !partners.isEmpty {
+                Label(
+                    "\(NotchNeighbors.list(partners)) shares the notch with Clove: it steps aside while you drag to pin.",
+                    systemImage: "checkmark.circle"
+                )
+                .font(.callout)
+                .foregroundStyle(Palette.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 16)
+            }
+
+            Text("You can switch any time in Settings, General.")
+                .font(.callout)
+                .foregroundStyle(Palette.inkTertiary)
+                .padding(.top, 12)
+        }
+        .task {
+            neighbors = await Task.detached { NotchNeighbors.installed() }.value
+            guard !didSuggest else { return }
+            didSuggest = true
+            settings.accessMode = neighbors.contains { !$0.playsAlong } ? .menuBar : .notch
+        }
+    }
+}
+
+/// One way to run Clove, picked like a radio button.
+struct ModeCard: View {
+    let mode: AccessMode
+    let symbol: String
+    let detail: String
+    let isPicked: Bool
+    let isSuggested: Bool
+    let pick: () -> Void
+
+    var body: some View {
+        Button(action: pick) {
+            HStack(spacing: 14) {
+                Image(systemName: symbol)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Palette.ink.opacity(0.75))
+                    .frame(width: 36, height: 36)
+                    .background(Palette.surfaceMuted, in: .rect(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(mode.title)
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundStyle(Palette.ink)
+                        if isSuggested {
+                            Text("Suggested")
+                                .font(.system(size: 10.5, weight: .semibold))
+                                .foregroundStyle(Palette.accent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Palette.accent.opacity(0.12), in: .capsule)
+                        }
+                    }
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: isPicked ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 17))
+                    .foregroundStyle(isPicked ? Palette.accent : Palette.inkTertiary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .padding(14)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onboardingCard()
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Palette.accent.opacity(isPicked ? 0.6 : 0), lineWidth: 1.5)
+        }
+        .animation(.easeOut(duration: 0.15), value: isPicked)
+        .accessibilityAddTraits(isPicked ? [.isSelected] : [])
+    }
+}
+
 // MARK: - Shortcut
 
 struct ShortcutStep: View {
@@ -264,7 +392,9 @@ struct ShortcutStep: View {
         VStack(alignment: .leading, spacing: 0) {
             StepHeader(
                 title: "One shortcut away",
-                message: "Open the menu bar panel from any app. It holds whichever blocks you pick: Skills, Storage, Running, and more."
+                message: settings.accessMode == .notch
+                    ? "From any app, the shortcut opens the notch on search. So does a click; a hover just peeks."
+                    : "From any app, the shortcut opens Clove's panel under its menu bar icon."
             )
 
             VStack(spacing: 10) {
@@ -273,10 +403,12 @@ struct ShortcutStep: View {
                         .disabled(!settings.hotKeyEnabled)
                 }
 
-                SettingCard(symbol: "menubar.rectangle", title: "Menu bar icon", detail: "Click for the panel, right-click for every section.") {
-                    Toggle("Menu bar icon", isOn: $settings.showMenuBarIcon)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
+                if settings.accessMode == .notch {
+                    SettingCard(symbol: "cursorarrow.motionlines", title: "Peek on hover", detail: "Right-click the notch for every section.") {
+                        Toggle("Peek on hover", isOn: $settings.notchOpensOnHover)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
                 }
             }
 

@@ -61,6 +61,7 @@ struct CleanupSummary: View {
                     }
 
                     CleanupLeftoversCard()
+                    CleanupWorktreesCard()
                     CleanupHistoryCard()
                 }
             } else {

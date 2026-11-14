@@ -1,23 +1,34 @@
 import SwiftUI
 
-/// A piece of Clove that can sit in the menu bar panel. You pick which ones
-/// are in your set; their tiles sit along the bottom and switch the panel.
+/// A tab in the notch. You pick which ones are in your set; their icons sit
+/// beside the notch and switch between them.
 enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
+    case now
     case skills
     case storage
-    case running
     case cleanup
     case trending
 
     var id: String { rawValue }
 
-    static let defaults: [PanelBlock] = [.skills, .storage, .running, .cleanup]
+    static let defaults: [PanelBlock] = [.now, .skills, .storage, .cleanup]
+    /// Lists you scroll get the island's full height; the rest size to fit,
+    /// so there's never empty island below them or content cut off.
+    var fitsContent: Bool {
+        switch self {
+        case .now, .storage, .cleanup: true
+        case .skills, .trending: false
+        }
+    }
+
+    /// The strip beside the notch has room for this many tabs.
+    static let maxTabs = 4
 
     var title: String {
         switch self {
+        case .now: "Now"
         case .skills: "Skills"
         case .storage: "Storage"
-        case .running: "Running"
         case .cleanup: "Cleanup"
         case .trending: "Trending"
         }
@@ -25,9 +36,9 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
 
     var detail: String {
         switch self {
+        case .now: "Agents at work and servers up"
         case .skills: "Search, copy, and insert skills"
         case .storage: "The disk, live, and what to clear"
-        case .running: "Agent sessions and servers"
         case .cleanup: "Context spent on unused skills"
         case .trending: "What's climbing on skills.sh"
         }
@@ -35,9 +46,9 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
 
     var symbol: String {
         switch self {
+        case .now: "dot.radiowaves.left.and.right"
         case .skills: "square.stack.3d.up.fill"
         case .storage: "internaldrive.fill"
-        case .running: "waveform.path.ecg"
         case .cleanup: "leaf.fill"
         case .trending: "chart.line.uptrend.xyaxis"
         }
@@ -46,9 +57,9 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
     /// Each block's colour, from the same vivid set the storage bar uses.
     var tint: Color {
         switch self {
+        case .now: Palette.Vivid.violet
         case .skills: Palette.Vivid.blue
         case .storage: Palette.Vivid.orange
-        case .running: Palette.mint
         case .cleanup: Palette.Vivid.green
         case .trending: Palette.Vivid.pink
         }
@@ -57,9 +68,9 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
     /// Where "Open in Clove" goes.
     var destination: SidebarItem {
         switch self {
+        case .now: .running
         case .skills: .library(.all)
         case .storage: .storage
-        case .running: .running
         case .cleanup: .cleanup
         case .trending: .discover
         }
@@ -67,10 +78,16 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
 }
 
 extension SettingsStore {
+    /// The tab showing, always one from your set.
+    var currentTab: PanelBlock {
+        panelBlocks.contains(panelBlock) ? panelBlock : (panelBlocks.first ?? .skills)
+    }
+
     /// Adds or removes a block. One always stays, or the panel would be empty,
     /// and blocks keep the catalogue's order however they were added.
     func setBlock(_ block: PanelBlock, included: Bool) {
         if included {
+            guard panelBlocks.count < PanelBlock.maxTabs || panelBlocks.contains(block) else { return }
             panelBlocks = PanelBlock.allCases.filter { panelBlocks.contains($0) || $0 == block }
         } else {
             guard panelBlocks != [block] else { return }

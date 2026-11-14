@@ -37,6 +37,29 @@ struct StorageCard: View {
     private static let seamLight = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0, darkOpacity: 0.05)
     private static let dropShadow = Color.dynamic(light: 0x000000, dark: 0x000000, lightOpacity: 0.06, darkOpacity: 0.3)
 
+    /// In the window, a raised card: a faint ring, a hairline of light along the
+    /// top in the dark, and a soft shadow. In the notch it sits flat in the
+    /// island like the cards beside it, so it doesn't read as a card on a card.
+    @ViewBuilder
+    private var surface: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        if isCompact {
+            shape.fill(Color.primary.opacity(0.06))
+        } else {
+            shape
+                .fill(Self.surface)
+                .overlay { shape.strokeBorder(Palette.ring, lineWidth: 1) }
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Self.edgeLight)
+                        .frame(height: 1)
+                        .padding(.horizontal, 20)
+                }
+                .shadow(color: .black.opacity(0.06), radius: 1, y: 1)
+                .shadow(color: Self.dropShadow, radius: 16, y: 10)
+        }
+    }
+
     /// What's being looked at: the pointer wins, then the selection. Nothing while busy.
     private var looking: StorageKind? {
         guard store.phase == .idle else { return nil }
@@ -81,20 +104,7 @@ struct StorageCard: View {
         }
         .prose(13)
         .foregroundStyle(Palette.ink)
-        // A faint ring, and in the dark a hairline of light along the top edge.
-        .background(Self.surface, in: .rect(cornerRadius: radius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(Palette.ring, lineWidth: 1)
-        }
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Self.edgeLight)
-                .frame(height: 1)
-                .padding(.horizontal, 20)
-        }
-        .shadow(color: .black.opacity(0.06), radius: 1, y: 1)
-        .shadow(color: Self.dropShadow, radius: 16, y: 10)
+        .background { surface }
         .onChange(of: looking) { _, kind in
             moveHighlight(to: kind)
         }
@@ -366,8 +376,12 @@ struct StorageCard: View {
     /// Engraved: a dark line with a faint lit one under it.
     private var seam: some View {
         VStack(spacing: 0) {
-            Rectangle().fill(Self.seamShade).frame(height: 1)
-            Rectangle().fill(Self.seamLight).frame(height: 1)
+            if isCompact {
+                Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1)
+            } else {
+                Rectangle().fill(Self.seamShade).frame(height: 1)
+                Rectangle().fill(Self.seamLight).frame(height: 1)
+            }
         }
         .padding(.horizontal, 1)
         .accessibilityHidden(true)

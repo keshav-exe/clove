@@ -68,6 +68,7 @@ final class AppModel {
     let secrets = SecretsStore()
     let running = RunningStore()
     let containers = ContainerStore()
+    let worktrees = WorktreeStore()
     private let scanner: SkillScanner
     private let persistence: TagPersistence
 
@@ -176,7 +177,7 @@ final class AppModel {
             break
         case .library(let filter):
             libraryFilter = filter
-        case .cleanup, .storage, .resources, .secrets, .running:
+        case .cleanup, .storage, .resources, .secrets, .running, .worktrees:
             break
         }
     }

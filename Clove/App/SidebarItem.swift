@@ -10,4 +10,5 @@ enum SidebarItem: Hashable, Sendable {
     case resources(ResourceKind)
     case secrets
     case running
+    case worktrees
 }

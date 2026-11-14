@@ -7,6 +7,14 @@ struct WhatsNewSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        if release.isNotchTutorial {
+            NotchTutorialSheet(onFinish: finish)
+        } else {
+            list
+        }
+    }
+
+    private var list: some View {
         FeatureSheet(
             symbolName: release.symbolName,
             title: release.title,
