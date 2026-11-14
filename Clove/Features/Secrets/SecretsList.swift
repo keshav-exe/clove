@@ -7,7 +7,7 @@ struct SecretsList: View {
         @Bindable var secrets = model.secrets
 
         ListPage(selection: $secrets.selection, order: secrets.items.map(\.id)) {
-            PageHeader(title: "Secrets", summary: "API keys kept in your Keychain, not a dotfile. macOS asks before anything reads one.")
+            PageHeader(title: "Secrets", summary: "API keys stored in your Keychain instead of a dotfile. macOS asks before anything uses one.")
 
             if !secrets.findings.isEmpty {
                 PlaintextBanner(count: secrets.findings.count) {

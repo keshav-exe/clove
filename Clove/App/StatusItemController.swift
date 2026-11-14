@@ -60,6 +60,24 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
+    /// A live number beside the icon, in the menu bar's own font with steady
+    /// digits so it doesn't jiggle as it changes. Nil goes back to the icon alone.
+    func setStat(_ reading: (text: String, spoken: String)?) {
+        guard let button else { return }
+        if let reading, !reading.text.isEmpty {
+            button.attributedTitle = NSAttributedString(
+                string: " " + reading.text,
+                attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)]
+            )
+            button.imagePosition = .imageLeading
+            button.setAccessibilityLabel("Clove, \(reading.spoken)")
+        } else {
+            button.title = ""
+            button.imagePosition = .imageOnly
+            button.setAccessibilityLabel(reading.map { "Clove, \($0.spoken)" } ?? "Clove")
+        }
+    }
+
     private func showMenu() {
         // Attached only while it shows, so a left click stays free for the panel.
         item.menu = menu
@@ -104,11 +122,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private static let places: [(String, String, SidebarItem)] = [
         ("Home", "house", .home),
+        ("Storage", "internaldrive", .storage),
+        ("Cleanup", "leaf", .cleanup),
+        ("Running", "waveform.path.ecg", .running),
         ("Skills", "square.stack.3d.up", .library(.all)),
         ("Discover", "safari", .discover),
-        ("Running", "waveform.path.ecg", .running),
-        ("Cleanup", "leaf", .cleanup),
-        ("Storage", "internaldrive", .storage),
     ]
 
     private func submenu(_ title: String, symbol: String, kinds: [ResourceKind]) -> NSMenuItem {

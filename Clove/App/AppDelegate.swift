@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyActivationPolicy()
         applyStatusItem()
         applyHotKey()
+        applyMenuBarStat()
         panel?.setPinned(model.settings.keepPanelOnTop)
     }
 
@@ -164,6 +165,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
             statusItem = item
+            applyMenuBarStat()
+        }
+    }
+
+    // MARK: - Menu bar stat
+
+    private var statTask: Task<Void, Never>?
+
+    /// Refreshes the number beside the icon on the stat's own schedule. Nothing
+    /// runs when the icon is shown alone.
+    private func applyMenuBarStat() {
+        statTask?.cancel()
+        let stat = model.settings.menuBarStat
+        guard stat != .none, let item = statusItem else {
+            statusItem?.setStat(nil)
+            return
+        }
+        statTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let reading = await stat.reading(known: self.model.knownServers)
+                guard !Task.isCancelled else { return }
+                item.setStat(reading)
+                try? await Task.sleep(for: stat.interval)
+            }
         }
     }
 
@@ -186,6 +212,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = settings.hideDockIcon
             _ = settings.keepRunningInMenuBar
             _ = settings.keepPanelOnTop
+            _ = settings.menuBarStat
             _ = settings.hasCompletedOnboarding
         } onChange: { [weak self] in
             Task { @MainActor in

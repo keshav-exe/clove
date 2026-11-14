@@ -27,6 +27,18 @@ enum RunningScanner {
         }
     }
 
+    /// What kind each running server or agent is, and nothing else: the menu bar
+    /// count needs no folders, so it skips the extra `lsof` that finds them.
+    @concurrent
+    static func kinds(known: [KnownServer]) async -> [RunningProcess.Kind] {
+        let table = ProcessTable.parse(
+            run("/bin/ps", ["-axo", "pid=,ppid=,etime=,rss=,args="]),
+            executables: run("/bin/ps", ["-axo", "pid=,comm="])
+        )
+        let ports = listeningPorts(run("/usr/sbin/lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]))
+        return classify(table: table, ports: ports, known: known).map(\.kind)
+    }
+
     // MARK: - Classification
 
     static let agentPrograms: [String: String] = [

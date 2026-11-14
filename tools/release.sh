@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Ships a Clove release from this Mac in one go:
-# version bump, signed and notarized DMG, git tag, and a GitHub release.
+# version bump, signed and notarized DMG, git tag, and a GitHub release with the
+# DMG, its checksums, and install.sh (what the README's curl line fetches).
 # Clove reads the latest GitHub release to offer updates, so that's all it takes.
 #
 #   ./tools/release.sh 2.1                  notes written by GitHub from the commits
@@ -53,12 +54,16 @@ echo "-> Version $VERSION ($NEXT_BUILD) committed"
 LICENSED=1 SIGN_ID="$SIGN_ID" NOTARIZE=1 NOTARY_PROFILE="$NOTARY_PROFILE" ./tools/MakeDMG.sh
 [[ -f "$DMG" ]] || fail "Expected $DMG after the build."
 
+# What `curl ... install.sh | bash` checks the download against.
+CHECKSUMS="dist/checksums.txt"
+(cd dist && shasum -a 256 "$(basename "$DMG")") > "$CHECKSUMS"
+
 git tag "$TAG"
 git push -q origin HEAD "$TAG"
 
 NOTE_ARGS=(--generate-notes)
 [[ -n "$NOTES" ]] && NOTE_ARGS=(--notes-file "$NOTES")
-gh release create "$TAG" "$DMG" --title "Clove $VERSION" "${NOTE_ARGS[@]}"
+gh release create "$TAG" "$DMG" "$CHECKSUMS" tools/install.sh --title "Clove $VERSION" "${NOTE_ARGS[@]}"
 
 echo ""
 echo "ok Clove $VERSION is live. Every copy of Clove will offer it on its next check."

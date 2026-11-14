@@ -62,7 +62,8 @@ final class PanelController {
     }
 
     func toggle(relativeTo statusButton: NSView? = nil) {
-        if panel.isVisible {
+        // Shown, not merely on screen: a click during the fade-out reopens it.
+        if isShown {
             hide()
         } else {
             show(relativeTo: statusButton)
@@ -78,6 +79,7 @@ final class PanelController {
 
         // `orderFrontRegardless` first: a status item click does not always grant
         // activation, and ordering front afterwards would lose the race.
+        animateIn(fromMenuBar: statusButton != nil)
         panel.orderFrontRegardless()
 
         if !isPinned {
@@ -92,7 +94,80 @@ final class PanelController {
     func hide() {
         saveFrameIfPinned()
         removeOutsideClickMonitor()
+        animateOut()
+    }
+
+    // MARK: - Motion
+
+    /// Bumped on every show and hide, so a hide that finishes after the panel
+    /// was shown again doesn't take it away.
+    private var presentation = 0
+    /// The panel is shown or showing; false from the moment a hide starts.
+    private var isShown = false
+
+    private var reduceMotion: Bool {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    /// The way a popover arrives: it grows out of the menu bar, from its top
+    /// edge, with a quick fade. Opened by the shortcut, it only fades, since
+    /// there's no icon to grow from.
+    private func animateIn(fromMenuBar: Bool) {
+        presentation += 1
+        isShown = true
+        guard !reduceMotion, let layer = panel.contentView?.layer else {
+            panel.alphaValue = 1
+            return
+        }
+        panel.alphaValue = 0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.16
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        }
+
+        let bounds = layer.bounds
+        let scale: CGFloat = fromMenuBar ? 0.96 : 0.98
+        // Scale about the top centre: the layer's origin is bottom-left.
+        let start = CATransform3DConcat(
+            CATransform3DMakeScale(scale, scale, 1),
+            CATransform3DMakeTranslation(bounds.width * (1 - scale) / 2, bounds.height * (1 - scale), 0)
+        )
+        let spring = CASpringAnimation(keyPath: "transform")
+        spring.fromValue = NSValue(caTransform3D: start)
+        spring.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+        spring.mass = 1
+        spring.stiffness = 420
+        spring.damping = 34
+        spring.duration = spring.settlingDuration
+        layer.transform = CATransform3DIdentity
+        layer.add(spring, forKey: "present")
+    }
+
+    /// Out is quicker than in, and only a fade: it's getting out of the way.
+    private func animateOut() {
+        presentation += 1
+        isShown = false
+        let token = presentation
+        guard !reduceMotion, panel.isVisible else {
+            finishHiding()
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.11
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.presentation == token else { return }
+                self.finishHiding()
+            }
+        }
+    }
+
+    private func finishHiding() {
         panel.orderOut(nil)
+        panel.alphaValue = 1
         model.isPanelVisible = false
     }
 

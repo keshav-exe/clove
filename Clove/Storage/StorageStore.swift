@@ -30,7 +30,7 @@ enum StorageClean: Sendable, Equatable, CaseIterable {
 
     func line(_ size: String) -> String {
         switch self {
-        case .caches: "Caches are using \(size). Apps rebuild them when they need them."
+        case .caches: "\(size) of caches you can clear. Apps rebuild them as needed."
         case .trash: "The Trash is holding \(size) of things you've already deleted."
         }
     }
@@ -74,6 +74,23 @@ final class StorageStore {
     struct Freed: Equatable {
         let kind: StorageKind
         let bytes: Int64
+        /// The clear moved things to the Trash; this record puts them back.
+        var record: ClearRecord.ID?
+    }
+
+    /// One clear or move to the Trash, kept so it can be put back until the
+    /// Trash is emptied.
+    struct ClearRecord: Codable, Identifiable, Hashable, Sendable {
+        let id: UUID
+        let date: Date
+        let title: String
+        let bytes: Int64
+        let moves: [StorageSafety.Move]
+
+        /// Whether anything is still in the Trash to put back.
+        var canPutBack: Bool {
+            moves.contains { FileManager.default.fileExists(atPath: $0.trashed.path(percentEncoded: false)) }
+        }
     }
 
     private(set) var phase: Phase = .idle
@@ -92,6 +109,22 @@ final class StorageStore {
     var pinned: StorageKind?
     var pendingClean: StorageClean?
     var failure: String?
+
+    /// What was cleared or trashed lately, newest first, so any of it can go back.
+    private(set) var history: [ClearRecord] = []
+
+    /// Folders the person chose to always keep: never cleared, never suggested.
+    private(set) var kept: [String] = []
+
+    /// Clear Caches moves to the Trash first, so a clear can be undone. Off,
+    /// caches are deleted straight away and the space comes back at once.
+    var trashFirst: Bool {
+        didSet { UserDefaults.standard.set(trashFirst, forKey: Self.trashFirstKey) }
+    }
+
+    private static let keptKey = "storage.kept"
+    private static let trashFirstKey = "storage.trashFirst"
+    private static let historyLimit = 12
 
     private let scanner = StorageScanner()
     /// This scan started from an empty bar and counts it back up.
@@ -115,7 +148,10 @@ final class StorageStore {
     private var lastFullScan: Date?
 
     init() {
+        trashFirst = UserDefaults.standard.object(forKey: Self.trashFirstKey) as? Bool ?? true
+        kept = UserDefaults.standard.stringArray(forKey: Self.keptKey) ?? []
         restoreSnapshot()
+        restoreHistory()
     }
 
     var isBusy: Bool { phase != .idle }
@@ -168,7 +204,7 @@ final class StorageStore {
         let kinds = pinned.map { [$0] } ?? StorageKind.allCases.filter { $0 != .trash }
         return kinds
             .flatMap { items(of: $0) }
-            .filter { $0.bytes >= Self.rowThreshold && !$0.url.lastPathComponent.hasPrefix(".") }
+            .filter { $0.bytes >= Self.rowThreshold && !$0.url.lastPathComponent.hasPrefix(".") && !isKept($0) }
             .sorted { $0.bytes > $1.bytes }
             .prefix(limit)
             .map { $0 }
@@ -196,6 +232,7 @@ final class StorageStore {
         let names = Set(running.compactMap(\.localizedName).map { $0.lowercased() })
         let own = Bundle.main.bundleIdentifier?.lowercased()
         return items.filter { item in
+            if isKept(item) { return false }
             let name = item.url.lastPathComponent.lowercased()
             if name.hasPrefix("com.apple.") || name == "cloudkit" || name == own { return false }
             if ids.contains(name) || names.contains(name) { return false }
@@ -208,12 +245,12 @@ final class StorageStore {
     func note(for kind: StorageKind) -> String {
         guard let report = reports[kind] else {
             return kind == .system
-                ? "macOS, local snapshots, swap, and app data that isn't filed anywhere else."
+                ? "macOS itself, and app data that isn't sorted anywhere else."
                 : "Rescan to measure."
         }
         if report.isRestricted, report.bytes == 0 {
             return kind == .trash
-                ? "Give Clove Full Disk Access to look inside the Trash."
+                ? "Clove needs Full Disk Access to see inside the Trash."
                 : "macOS didn't let Clove read this folder."
         }
         let largest = report.items.first
@@ -246,7 +283,7 @@ final class StorageStore {
                 return "\(count) songs and recordings kept on this Mac."
             }
         case .system:
-            return "macOS, local snapshots, swap, and app data that isn't filed anywhere else."
+            return "macOS itself, and app data that isn't sorted anywhere else."
         case .caches:
             if let largest {
                 return "Apps rebuild these when they need them. \(Self.owner(of: largest.url)) keeps the most, at \(StorageFormat.gb(largest.bytes))."
@@ -405,6 +442,9 @@ final class StorageStore {
         let kind = clean.kind
         let targets = targets(for: clean)
         guard !targets.isEmpty else { return }
+        // Caches go to the Trash first unless the person turned that off. The
+        // Trash itself can only be emptied for real.
+        let recoverable = clean == .caches && trashFirst
 
         phase = .cleaning(clean)
         freed = nil
@@ -414,19 +454,31 @@ final class StorageStore {
         let events = AsyncStream<ClearEvent> { continuation in
             let task = Task.detached(priority: .userInitiated) {
                 var failures = 0
+                var moves: [StorageSafety.Move] = []
                 for item in targets {
                     if Task.isCancelled { break }
                     continuation.yield(.started(item.url))
-                    failures += Self.remove(item, emptyingFolder: clean == .caches)
+                    guard let root = item.kind.roots.first?.url else {
+                        failures += 1
+                        continue
+                    }
+                    if recoverable {
+                        let result = StorageSafety.trash(item.url, inside: root, emptyingFolder: true)
+                        moves += result.moves
+                        failures += result.failures
+                    } else {
+                        failures += StorageSafety.remove(item.url, inside: root, emptyingFolder: clean == .caches)
+                    }
                     continuation.yield(.removed(item.bytes))
                 }
-                continuation.yield(.finished(failures: failures))
+                continuation.yield(.finished(failures: failures, moves: moves))
                 continuation.finish()
             }
             continuation.onTermination = { _ in task.cancel() }
         }
 
         var failures = 0
+        var moves: [StorageSafety.Move] = []
         var remaining = cleanFrom
         for await event in events {
             switch event {
@@ -435,16 +487,18 @@ final class StorageStore {
             case .removed(let bytes):
                 remaining -= bytes
                 live[kind] = max(0, remaining)
-            case .finished(let count):
+            case .finished(let count, let moved):
                 failures = count
+                moves = moved
             }
         }
 
         // What's actually left: open apps keep part of their caches, and some
-        // files refuse to go.
+        // files refuse to go. A recoverable clear also grew the Trash.
         let scanner = scanner
-        let report = await Task.detached(priority: .userInitiated) {
-            scanner.scan(kind) { _, _ in }
+        let measured: [StorageKind] = recoverable ? [kind, .trash] : [kind]
+        let reportsAfter = await Task.detached(priority: .userInitiated) {
+            measured.map { ($0, scanner.scan($0) { _, _ in }) }
         }.value
 
         let elapsed = Date.now.timeIntervalSince(cleanStarted ?? .now)
@@ -452,9 +506,19 @@ final class StorageStore {
             try? await Task.sleep(for: .seconds(clean.seconds + 0.25 - elapsed))
         }
 
-        reports[kind] = report
-        live[kind] = report.bytes
-        freed = Freed(kind: kind, bytes: max(0, cleanFrom - report.bytes))
+        for (measuredKind, report) in reportsAfter {
+            reports[measuredKind] = report
+            live[measuredKind] = report.bytes
+        }
+        let cleared = max(0, cleanFrom - (reports[kind]?.bytes ?? 0))
+        var recordID: ClearRecord.ID?
+        if recoverable, !moves.isEmpty {
+            let record = ClearRecord(id: UUID(), date: .now, title: "Caches", bytes: cleared, moves: moves)
+            remember(record)
+            recordID = record.id
+        }
+        if clean == .trash { forgetEmptiedTrash() }
+        freed = Freed(kind: kind, bytes: cleared, record: recordID)
         currentPath = nil
         cleanStarted = nil
         phase = .idle
@@ -466,9 +530,77 @@ final class StorageStore {
         saveSnapshot()
     }
 
-    private nonisolated static func remove(_ item: StorageItem, emptyingFolder: Bool) -> Int {
-        guard let root = item.kind.roots.first?.url else { return 1 }
-        return StorageSafety.remove(item.url, inside: root, emptyingFolder: emptyingFolder)
+    // MARK: - Putting back
+
+    /// Puts a clear or a move back where it came from, then measures again.
+    func putBack(_ record: ClearRecord) async {
+        guard phase == .idle else { return }
+        let moves = record.moves
+        let result = await Task.detached(priority: .userInitiated) {
+            StorageSafety.putBack(moves)
+        }.value
+        history.removeAll { $0.id == record.id }
+        saveHistory()
+        if freed?.record == record.id { freed = nil }
+        if result.missing > 0 {
+            failure = result.restored == 0
+                ? "Nothing could go back: it's no longer in the Trash, or something new is in its place."
+                : "\(result.restored) went back. \(result.missing) couldn't: no longer in the Trash, or something new is in its place."
+        }
+        let touched = Set(moves.compactMap { kind(containing: $0.original) })
+        await remeasure(touched.union([.trash]))
+    }
+
+    private func kind(containing url: URL) -> StorageKind? {
+        StorageKind.allCases.first { kind in
+            StorageSafety.isInside(url, roots: kind.roots.map(\.url))
+        }
+    }
+
+    private func remeasure(_ kinds: Set<StorageKind>) async {
+        let scanner = scanner
+        let list = Array(kinds.subtracting([.system]))
+        let results = await Task.detached(priority: .userInitiated) {
+            list.map { ($0, scanner.scan($0) { _, _ in }) }
+        }.value
+        for (kind, report) in results {
+            reports[kind] = report
+            live[kind] = report.bytes
+        }
+        saveSnapshot()
+    }
+
+    private func remember(_ record: ClearRecord) {
+        history.insert(record, at: 0)
+        if history.count > Self.historyLimit { history.removeLast(history.count - Self.historyLimit) }
+        saveHistory()
+    }
+
+    /// Once the Trash is emptied, there's nothing to put back.
+    private func forgetEmptiedTrash() {
+        history.removeAll { !$0.canPutBack }
+        saveHistory()
+    }
+
+    // MARK: - Keeping
+
+    func isKept(_ item: StorageItem) -> Bool {
+        let path = StorageSafety.trimmedPath(item.url)
+        return kept.contains { path == $0 || path.hasPrefix($0 + "/") }
+    }
+
+    /// Never clear or suggest this folder again, in any scan.
+    func keep(_ item: StorageItem) {
+        let path = StorageSafety.trimmedPath(item.url)
+        guard !kept.contains(path) else { return }
+        kept.append(path)
+        kept.sort()
+        UserDefaults.standard.set(kept, forKey: Self.keptKey)
+    }
+
+    func stopKeeping(_ path: String) {
+        kept.removeAll { $0 == path }
+        UserDefaults.standard.set(kept, forKey: Self.keptKey)
     }
 
     // MARK: - Single items
@@ -484,12 +616,20 @@ final class StorageStore {
             failure = "“\(item.name)” isn't where the last scan found it. Rescan to see what's there now."
             return
         }
+        var trashed: NSURL?
         do {
-            try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            try FileManager.default.trashItem(at: item.url, resultingItemURL: &trashed)
         } catch {
             failure = "Couldn't move “\(item.name)” to the Trash. \(error.localizedDescription)"
             return
         }
+        var recordID: ClearRecord.ID?
+        if let trashed = trashed as URL? {
+            let record = ClearRecord(id: UUID(), date: .now, title: item.name, bytes: item.bytes, moves: [.init(original: item.url, trashed: trashed)])
+            remember(record)
+            recordID = record.id
+        }
+        freed = Freed(kind: item.kind, bytes: item.bytes, record: recordID)
         // The bytes don't leave the disk, they move to the end of the bar.
         live[item.kind] = max(0, (live[item.kind] ?? 0) - item.bytes)
         live[.trash] = (live[.trash] ?? 0) + item.bytes
@@ -540,6 +680,26 @@ final class StorageStore {
         }
     }
 
+    private static var historyURL: URL? {
+        snapshotURL?.deletingLastPathComponent().appending(path: "storage-history.json", directoryHint: .notDirectory)
+    }
+
+    private func saveHistory() {
+        guard let url = Self.historyURL, let data = try? JSONEncoder().encode(history) else { return }
+        Task.detached(priority: .background) {
+            Self.write(data, to: url)
+        }
+    }
+
+    private func restoreHistory() {
+        guard let url = Self.historyURL,
+              let data = try? Data(contentsOf: url),
+              let saved = try? JSONDecoder().decode([ClearRecord].self, from: data)
+        else { return }
+        // Anything emptied from the Trash since can't go back, so it isn't offered.
+        history = saved.filter(\.canPutBack)
+    }
+
     private nonisolated static func write(_ data: Data, to url: URL) {
         let manager = FileManager.default
         let folder = url.deletingLastPathComponent()
@@ -582,5 +742,5 @@ private enum ScanEvent: Sendable {
 private enum ClearEvent: Sendable {
     case started(URL)
     case removed(Int64)
-    case finished(failures: Int)
+    case finished(failures: Int, moves: [StorageSafety.Move])
 }

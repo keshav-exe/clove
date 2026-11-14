@@ -300,11 +300,12 @@ struct RunningBlock: View {
     var body: some View {
         let running = model.running
         let processes = RunningProcess.Kind.allCases.flatMap { running.items(of: $0) }
+        let containers = model.containers.containers
 
         VStack(spacing: 0) {
-            PanelBlockHeader(block: .running, note: processes.count.formatted())
+            PanelBlockHeader(block: .running, note: (processes.count + model.containers.running.count).formatted())
 
-            if processes.isEmpty {
+            if processes.isEmpty && containers.isEmpty {
                 PanelBlockEmpty(symbol: "waveform.path.ecg", text: "Nothing running. Agent sessions and their servers show up here.")
             } else {
                 ScrollView {
@@ -318,6 +319,18 @@ struct RunningBlock: View {
                                 RunningRow(process: process, isStopping: running.stopping.contains(process.pid))
                             }
                         }
+                        if !containers.isEmpty {
+                            Text("Containers")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 10)
+                                .padding(.top, 10)
+                                .padding(.bottom, 2)
+                            ForEach(containers) { container in
+                                ContainerRow(container: container)
+                            }
+                        }
                     }
                     .padding(.horizontal, 6)
                     .padding(.bottom, 8)
@@ -327,6 +340,9 @@ struct RunningBlock: View {
         }
         .task {
             await running.refresh(known: model.knownServers)
+        }
+        .task {
+            await model.containers.refresh()
         }
     }
 }

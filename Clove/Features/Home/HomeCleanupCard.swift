@@ -14,7 +14,7 @@ struct HomeCleanupCard: View {
             title: "Cleanup",
             symbolName: "leaf",
             value: tokens.formatted(),
-            caption: "tokens to give back every session",
+            caption: "tokens you could save in every session",
             destination: .cleanup
         ) {
             HomeRow(label: "Unused skills and commands", value: candidates.count.formatted(), destination: .cleanup)

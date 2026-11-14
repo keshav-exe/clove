@@ -15,6 +15,15 @@ struct GeneralSettingsPane: View {
                 VStack(alignment: .leading, spacing: 0) {
                     SettingsCheckboxRow(title: "Launch at login", isOn: $launch.isEnabled)
                     SettingsCheckboxRow(title: "Show menu bar icon", isOn: $settings.showMenuBarIcon)
+                    Picker("Beside the icon", selection: $settings.menuBarStat) {
+                        ForEach(MenuBarStat.allCases) { stat in
+                            Text(stat.title).tag(stat)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                    .disabled(!settings.showMenuBarIcon)
+                    .padding(.vertical, 4)
                     SettingsCheckboxRow(
                         title: "Keep running in menu bar when window is closed",
                         isOn: $settings.keepRunningInMenuBar,
@@ -26,6 +35,28 @@ struct GeneralSettingsPane: View {
                         isDisabled: !settings.canHideDockIcon
                     )
                     SettingsCheckboxRow(title: "Keep panel on top", isOn: $settings.keepPanelOnTop)
+                }
+            }
+
+            SettingsPaneDivider()
+
+            SettingsSection(
+                footer: "Clearing caches moves them to the Trash first, so Storage can put them back until you empty it. Folders you mark Always Keep are never cleared or suggested."
+            ) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Storage")
+                        .font(.headline)
+                        .padding(.bottom, 6)
+                    SettingsCheckboxRow(
+                        title: "Move caches to the Trash before clearing",
+                        isOn: Binding { model.storage.trashFirst } set: { model.storage.trashFirst = $0 }
+                    )
+                    if !model.storage.kept.isEmpty {
+                        Text(model.storage.kept.count == 1 ? "1 folder always kept" : "\(model.storage.kept.count) folders always kept, listed in Storage")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                    }
                 }
             }
 

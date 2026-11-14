@@ -9,7 +9,7 @@ struct HomeRunningCard: View {
             title: "Running Now",
             symbolName: "waveform.path.ecg",
             value: (running.processes.value?.count ?? 0).formatted(),
-            caption: "agents and servers",
+            caption: "running now",
             destination: .running
         ) {
             ForEach(RunningProcess.Kind.allCases, id: \.self) { kind in

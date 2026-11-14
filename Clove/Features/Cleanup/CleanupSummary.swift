@@ -6,6 +6,7 @@ struct CleanupSummary: View {
     @Environment(AppModel.self) private var model
 
     private var cleanup: CleanupStore { model.cleanup }
+    @State private var isShowingKept = false
 
     var body: some View {
         let candidates = model.cleanupCandidates
@@ -13,7 +14,7 @@ struct CleanupSummary: View {
         Group {
             if let report = cleanup.usage.value {
                 OverviewPage {
-                    PageHeader(title: "Cleanup", summary: "Skills and commands nobody calls still cost context in every session. Clove reads your agent history to find them.")
+                    PageHeader(title: "Cleanup", summary: "Skills and commands you don't use still take up room in every agent session. Clove checks your history to find them.")
 
                     if let result = cleanup.lastResult {
                         CleanupDoneView(result: result, undo: undo, dismiss: cleanup.dismissResult)
@@ -30,9 +31,18 @@ struct CleanupSummary: View {
                         )
 
                         Tile {
-                            TileHeader(title: "Unused", note: candidates.count.formatted())
+                            TileHeader(title: "Unused", note: candidates.count.formatted()) {
+                                if !cleanup.alwaysKept.isEmpty {
+                                    Button("\(cleanup.alwaysKept.count) always kept") {
+                                        isShowingKept = true
+                                    }
+                                    .buttonStyle(.link)
+                                    .prose(12)
+                                    .help("Skills and commands you keep out of every cleanup")
+                                }
+                            }
                         } content: {
-                            VStack(spacing: 0) {
+                            DividedRows {
                                 ForEach(candidates) { candidate in
                                     CleanupRow(
                                         candidate: candidate,
@@ -40,8 +50,10 @@ struct CleanupSummary: View {
                                         toggle: { cleanup.toggle(candidate) }
                                     )
                                     .padding(.vertical, 3)
-                                    .overlay(alignment: .top) {
-                                        Rectangle().fill(Palette.hairline).frame(height: 0.5)
+                                    .contextMenu {
+                                        Button("Always Keep", systemImage: "lock") {
+                                            withAnimation(.easeOut(duration: 0.2)) { cleanup.alwaysKeep(candidate) }
+                                        }
                                     }
                                 }
                             }
@@ -69,6 +81,10 @@ struct CleanupSummary: View {
         .task {
             await cleanup.scanIfNeeded()
         }
+        .sheet(isPresented: $isShowingKept) {
+            AlwaysKeptSheet()
+                .environment(model)
+        }
     }
 
     private func rescan() {
@@ -89,5 +105,46 @@ struct CleanupSummary: View {
 
     private func undo() {
         Task { await cleanup.undo(using: model.manager) }
+    }
+}
+
+/// The skills and commands kept out of every cleanup, and the way to let one back in.
+private struct AlwaysKeptSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let kept = model.cleanup.alwaysKept.sorted()
+        VStack(alignment: .leading, spacing: Metrics.spacingM) {
+            Text("Always Kept")
+                .font(.headline)
+            Text("Cleanup never lists these, however long they go unused.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            List(kept, id: \.self) { id in
+                HStack {
+                    Text(Self.name(for: id))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Stop Keeping") { model.cleanup.stopAlwaysKeeping(id) }
+                        .controlSize(.small)
+                }
+            }
+            .frame(minHeight: 180)
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 420)
+    }
+
+    /// "skill:/Users/…/animations" reads as "animations".
+    private static func name(for id: String) -> String {
+        let raw = id.hasPrefix("skill:") ? String(id.dropFirst("skill:".count)) : id
+        return raw.contains("/") ? URL(filePath: raw).lastPathComponent : raw
     }
 }

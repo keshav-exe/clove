@@ -3,15 +3,21 @@ import SwiftUI
 struct LibrarySidebarRow: View {
     @Environment(AppModel.self) private var model
     let filter: LibraryFilter
-    let tint: Color
+    /// A colour of its own, like a source's. Nil follows the sidebar, which
+    /// turns the icon white on the selection instead of accent-on-accent.
+    var tint: Color?
 
     var body: some View {
         Label {
             Text(filter.title)
                 .lineLimit(1)
         } icon: {
-            Image(systemName: filter.symbolName)
-                .foregroundStyle(tint)
+            if let tint {
+                Image(systemName: filter.symbolName)
+                    .foregroundStyle(tint)
+            } else {
+                Image(systemName: filter.symbolName)
+            }
         }
             .badge(badge)
             .tag(SidebarItem.library(filter))

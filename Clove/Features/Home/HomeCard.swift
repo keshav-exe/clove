@@ -36,7 +36,7 @@ struct HomeCard<Rows: View>: View {
                         .foregroundStyle(Palette.inkSecondary)
                 }
 
-                VStack(spacing: 0) {
+                DividedRows {
                     rows
                 }
             }

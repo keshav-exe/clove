@@ -10,11 +10,17 @@ struct HomeView: View {
         OverviewPage {
             PageHeader(title: "Home", summary: summary)
 
+            // The Mac first: the live instrument, the same one Storage opens with.
+            StorageCard(store: model.storage, pinned: nil) { kind in
+                model.storage.pinned = kind
+                model.show(.storage)
+            }
+
             if !attention.isEmpty {
                 Tile {
                     TileHeader(title: "Needs a look", note: attention.count.formatted())
                 } content: {
-                    VStack(spacing: 0) {
+                    DividedRows {
                         ForEach(attention) { item in
                             HomeAttentionRow(item: item)
                         }
@@ -43,35 +49,38 @@ struct HomeView: View {
         .task {
             await model.marketplace.loadFeed(.trending)
         }
+        .task {
+            await model.storage.scanIfNeeded()
+        }
     }
 
     private var summary: String {
         let skills = model.catalog.count
-        let instructions = model.resources(of: .instructions).count
-        let servers = model.resources(of: .mcpServers).count
         let agents = Set(model.allResources.map(\.agent)).subtracting([.shared])
             .sorted()
             .prefix(3)
             .map(\.title)
             .formatted(.list(type: .and))
-        return "\(skills.formatted()) skills, \(instructions) instruction files, and \(servers) MCP servers"
-            + (agents.isEmpty ? "." : " across \(agents).")
+        let disk = model.storage.volume.map { "\(StorageFormat.gb($0.available)) free. " } ?? ""
+        return disk + "\(skills.formatted()) skills" + (agents.isEmpty ? " on this Mac." : " across \(agents).")
     }
 }
 
-/// One thing worth a look: what it is, why, and a way straight to it.
+/// One thing worth a look: what it is, why, and a way straight to it. Items
+/// fixed in System Settings carry their own button instead of a chevron.
 private struct HomeAttentionRow: View {
     @Environment(AppModel.self) private var model
     let item: HomeAttention
 
     var body: some View {
         Button {
-            model.show(item.destination)
+            if let action = item.action { action.perform() } else { model.show(item.destination) }
         } label: {
             HStack(spacing: Metrics.spacingM) {
                 Image(systemName: item.symbolName)
+                    .symbolRenderingMode(.hierarchical)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(item.isWarning ? Palette.Vivid.orange : Palette.accent)
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.title)
@@ -82,16 +91,19 @@ private struct HomeAttentionRow: View {
                         .foregroundStyle(Palette.inkSecondary)
                 }
                 Spacer(minLength: Metrics.spacingS)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Palette.inkTertiary)
+                if let action = item.action {
+                    Text(action.title)
+                        .prose(12, .medium)
+                        .foregroundStyle(Palette.accent)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Palette.inkTertiary)
+                }
             }
             .padding(.vertical, 8)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Palette.hairline).frame(height: 0.5)
-        }
     }
 }

@@ -200,6 +200,34 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.1",
+            title: "What's New in Clove",
+            subtitle: "Your servers and containers, one glance from the menu bar.",
+            symbolName: "shippingbox",
+            features: [
+                FeatureHighlight(
+                    symbolName: "shippingbox",
+                    title: "Containers",
+                    detail: "Running lists your Docker containers from Docker Desktop, OrbStack, or Colima. Start, stop, restart, or open one in your browser."
+                ),
+                FeatureHighlight(
+                    symbolName: "menubar.rectangle",
+                    title: "A Number in the Menu Bar",
+                    detail: "Show free space, dev servers, all servers, or containers beside the icon. Choose in Settings, General."
+                ),
+                FeatureHighlight(
+                    symbolName: "arrow.uturn.backward",
+                    title: "Nothing You Can't Get Back",
+                    detail: "Cleared caches go to the Trash first, and Recently cleared puts them back. Folders you always keep are never touched."
+                ),
+                FeatureHighlight(
+                    symbolName: "house",
+                    title: "Home Starts with Your Mac",
+                    detail: "The storage bar first, then anything that needs a look, like a permission Clove is missing or a disk that's nearly full."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {

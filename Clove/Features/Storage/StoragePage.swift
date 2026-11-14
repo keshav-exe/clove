@@ -38,17 +38,45 @@ struct StoragePage: View {
                         .foregroundStyle(Palette.inkSecondary)
                         .frame(maxWidth: .infinity, minHeight: 64)
                 } else {
-                    VStack(spacing: 0) {
+                    DividedRows {
                         ForEach(rows) { item in
                             StorageRow(item: item)
                         }
                     }
                 }
             }
+
+            if !storage.history.isEmpty {
+                Tile {
+                    TileHeader(title: "Recently cleared", note: "Put anything back until you empty the Trash")
+                } content: {
+                    DividedRows {
+                        ForEach(storage.history) { record in
+                            HistoryRow(record: record)
+                        }
+                    }
+                }
+                .transition(.opacity)
+            }
+
+            if !storage.kept.isEmpty {
+                Tile {
+                    TileHeader(title: "Always kept", note: "Never cleared or suggested")
+                } content: {
+                    DividedRows {
+                        ForEach(storage.kept, id: \.self) { path in
+                            KeptRow(path: path)
+                        }
+                    }
+                }
+                .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.2), value: storage.history)
+        .animation(.easeOut(duration: 0.2), value: storage.kept)
         .navigationTitle("Storage")
         .alert(
-            "Something didn't go",
+            "Couldn't finish",
             isPresented: Binding { storage.failure != nil } set: { if !$0 { storage.failure = nil } },
             presenting: storage.failure
         ) { _ in
@@ -78,7 +106,7 @@ struct StoragePage: View {
     private var summary: String {
         let storage = model.storage
         guard let volume = storage.volume else { return "What's filling this Mac, and what's safe to clear." }
-        return "\(StorageFormat.gb(volume.available)) free of \(StorageFormat.capacity(volume.capacity)). Hover the bar to see what's in each part, click one to list it."
+        return "\(StorageFormat.gb(volume.available)) free of \(StorageFormat.capacity(volume.capacity)). Clears go to the Trash first, so you can always put things back."
     }
 
     private var emptyLine: String {
@@ -119,8 +147,12 @@ private struct StorageRow: View {
 
             HStack(spacing: 2) {
                 Button("Show in Finder", systemImage: "folder") { model.storage.reveal(item) }
+                    .help("Show in Finder")
+                Button("Always Keep", systemImage: "lock") { withAnimation(.easeOut(duration: 0.2)) { model.storage.keep(item) } }
+                    .help("Never clear or suggest this folder again")
                 if item.canMoveToTrash {
                     Button("Move to Trash", systemImage: "trash") { model.storage.pendingTrash = item }
+                        .help("Move to the Trash. You can put it back")
                         .disabled(model.storage.isBusy)
                 }
             }
@@ -141,11 +173,9 @@ private struct StorageRow: View {
         .contentShape(.rect)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovered)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Palette.hairline).frame(height: 0.5)
-        }
         .contextMenu {
             Button("Show in Finder", systemImage: "folder") { model.storage.reveal(item) }
+            Button("Always Keep", systemImage: "lock") { model.storage.keep(item) }
             if item.canMoveToTrash {
                 Divider()
                 Button("Move to Trash", systemImage: "trash", role: .destructive) { model.storage.pendingTrash = item }
@@ -153,5 +183,73 @@ private struct StorageRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.name), \(StorageFormat.gb(item.bytes)), \(item.kind.title)")
+        // The hover buttons, for VoiceOver and the keyboard.
+        .accessibilityAction(named: "Show in Finder") { model.storage.reveal(item) }
+        .accessibilityAction(named: "Always Keep") { model.storage.keep(item) }
+        .accessibilityAction(named: "Move to Trash") {
+            if item.canMoveToTrash { model.storage.pendingTrash = item }
+        }
+    }
+}
+
+/// Something cleared or moved to the Trash, with the way back.
+private struct HistoryRow: View {
+    @Environment(AppModel.self) private var model
+    let record: StorageStore.ClearRecord
+
+    var body: some View {
+        HStack(spacing: Metrics.spacingM) {
+            Image(systemName: "arrow.uturn.backward.circle")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Palette.inkSecondary)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(record.title)
+                    .prose(13, .medium)
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                Text("\(record.moves.count == 1 ? "1 item" : "\(record.moves.count.formatted()) items") · \(record.date.formatted(.relative(presentation: .named)))")
+                    .prose(11)
+                    .foregroundStyle(Palette.inkSecondary)
+            }
+            Spacer(minLength: Metrics.spacingS)
+            Text(StorageFormat.gb(record.bytes))
+                .monoLabel(12)
+                .foregroundStyle(Palette.inkSecondary)
+            Button("Put Back") {
+                Task { await model.storage.putBack(record) }
+            }
+            .controlSize(.small)
+            .disabled(model.storage.isBusy)
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+/// A folder the person keeps out of every clear, and the way to stop.
+private struct KeptRow: View {
+    @Environment(AppModel.self) private var model
+    let path: String
+
+    var body: some View {
+        HStack(spacing: Metrics.spacingM) {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                .resizable()
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+            Text(StorageFormat.path(URL(filePath: path)))
+                .codeLabel(12)
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: Metrics.spacingS)
+            Button("Stop Keeping") {
+                withAnimation(.easeOut(duration: 0.2)) { model.storage.stopKeeping(path) }
+            }
+            .controlSize(.small)
+        }
+        .padding(.vertical, 8)
     }
 }

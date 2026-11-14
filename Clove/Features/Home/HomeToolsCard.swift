@@ -10,7 +10,7 @@ struct HomeToolsCard: View {
             title: "Tools & Access",
             symbolName: "server.rack",
             value: model.resources(of: .mcpServers).count.formatted(),
-            caption: "MCP servers set up",
+            caption: "MCP servers your agents can use",
             destination: .resources(.mcpServers)
         ) {
             HomeRow(

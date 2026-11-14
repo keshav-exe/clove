@@ -51,6 +51,39 @@ final class StorageSafetyTests {
         #expect(!StorageSafety.isInside(caches.appending(path: "evil.link/important.txt"), roots: [caches]))
     }
 
+    @Test func clearsGoToTheTrashAndComeBack() throws {
+        let folder = caches.appending(path: "com.app.real", directoryHint: .isDirectory)
+        let blob = folder.appending(path: "blob").path(percentEncoded: false)
+        let result = StorageSafety.trash(folder, inside: caches, emptyingFolder: true)
+        #expect(result.failures == 0)
+        #expect(!fm.fileExists(atPath: blob), "the cache's contents left it")
+        #expect(fm.fileExists(atPath: folder.path(percentEncoded: false)), "the folder itself stays")
+        #expect(result.moves.allSatisfy { fm.fileExists(atPath: $0.trashed.path(percentEncoded: false)) }, "everything is in the Trash")
+        #expect(fm.fileExists(atPath: preciousFile), "a link inside the cache went to the Trash as a link")
+
+        let back = StorageSafety.putBack(result.moves)
+        #expect(back.missing == 0)
+        #expect(fm.fileExists(atPath: blob), "Put Back restores the file where it was")
+    }
+
+    @Test func aLinkedCacheFolderIsTrashedAsALink() {
+        let result = StorageSafety.trash(caches.appending(path: "evil.link", directoryHint: .isDirectory), inside: caches, emptyingFolder: true)
+        #expect(result.moves.count == 1)
+        #expect(fm.fileExists(atPath: preciousFile), "what the link points at never moves")
+        _ = StorageSafety.putBack(result.moves)
+    }
+
+    @Test func putBackNeverOverwrites() throws {
+        let folder = caches.appending(path: "com.app.real", directoryHint: .isDirectory)
+        let result = StorageSafety.trash(folder, inside: caches, emptyingFolder: true)
+        let blob = folder.appending(path: "blob")
+        try "new".write(to: blob, atomically: true, encoding: .utf8)
+        let back = StorageSafety.putBack(result.moves)
+        #expect(back.missing >= 1)
+        #expect(try String(contentsOf: blob, encoding: .utf8) == "new", "the newer file is left alone")
+        for move in result.moves { try? fm.removeItem(at: move.trashed) }
+    }
+
     @Test func wholeAgentFoldersAreNeverTrashable() {
         let claude = StorageItem(url: URL(filePath: "/Users/someone/.claude"), kind: .developer, bytes: 1, isWholeRoot: true)
         let project = StorageItem(url: URL(filePath: "/Users/someone/Developer/app"), kind: .developer, bytes: 1)

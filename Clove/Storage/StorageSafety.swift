@@ -27,6 +27,64 @@ enum StorageSafety {
         return (try? manager.removeItem(at: target)) == nil ? 1 : 0
     }
 
+    /// One thing moved to the Trash, and where it went, so it can be put back.
+    struct Move: Sendable, Codable, Hashable {
+        let original: URL
+        let trashed: URL
+    }
+
+    /// Moves `url`, which must sit directly inside `root`, to the Trash instead of
+    /// deleting it. With `emptyingFolder`, a folder stays and its contents go,
+    /// one by one. Returns what moved and how many things refused to.
+    static func trash(_ url: URL, inside root: URL, emptyingFolder: Bool) -> (moves: [Move], failures: Int) {
+        guard isDirectChild(url, of: root) else { return ([], 1) }
+        let manager = FileManager.default
+        let target = URL(filePath: trimmedPath(url), directoryHint: .notDirectory)
+        guard let values = try? target.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey]) else { return ([], 0) }
+
+        func move(_ item: URL) -> Move? {
+            var trashed: NSURL?
+            guard (try? manager.trashItem(at: item, resultingItemURL: &trashed)) != nil, let trashed = trashed as URL? else { return nil }
+            return Move(original: item, trashed: trashed)
+        }
+
+        // A link goes to the Trash as a link; what it points at never moves.
+        if emptyingFolder, values.isDirectory == true, values.isSymbolicLink != true {
+            let children = (try? manager.contentsOfDirectory(at: target, includingPropertiesForKeys: nil, options: [])) ?? []
+            var moves: [Move] = []
+            var failures = 0
+            for child in children {
+                if let moved = move(child) { moves.append(moved) } else { failures += 1 }
+            }
+            return (moves, failures)
+        }
+        if let moved = move(target) { return ([moved], 0) }
+        return ([], 1)
+    }
+
+    /// Puts moved things back where they were. Anything already gone from the
+    /// Trash, or with something new in its old place, is left alone and counted.
+    static func putBack(_ moves: [Move]) -> (restored: Int, missing: Int) {
+        let manager = FileManager.default
+        var restored = 0
+        var missing = 0
+        for move in moves {
+            let trashed = move.trashed.path(percentEncoded: false)
+            let original = move.original.path(percentEncoded: false)
+            guard manager.fileExists(atPath: trashed), !manager.fileExists(atPath: original) else {
+                missing += 1
+                continue
+            }
+            try? manager.createDirectory(at: move.original.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if (try? manager.moveItem(at: move.trashed, to: move.original)) != nil {
+                restored += 1
+            } else {
+                missing += 1
+            }
+        }
+        return (restored, missing)
+    }
+
     /// `url` is one level inside `root`, with links in its parent resolved.
     static func isDirectChild(_ url: URL, of root: URL) -> Bool {
         let path = trimmedPath(url)

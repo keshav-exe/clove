@@ -55,6 +55,11 @@ final class SettingsStore {
         didSet { defaults.set(savedGroupNames, forKey: Keys.savedGroupNames) }
     }
 
+    /// What sits next to the menu bar icon, if anything.
+    var menuBarStat: MenuBarStat {
+        didSet { defaults.set(menuBarStat.rawValue, forKey: Keys.menuBarStat) }
+    }
+
     /// The blocks in the menu bar panel, in the order their tiles sit.
     var panelBlocks: [PanelBlock] {
         didSet { defaults.set(panelBlocks.map(\.rawValue), forKey: Keys.panelBlocks) }
@@ -115,6 +120,7 @@ final class SettingsStore {
         let blocks = (defaults.stringArray(forKey: Keys.panelBlocks) ?? []).compactMap(PanelBlock.init(rawValue:))
         panelBlocks = blocks.isEmpty ? PanelBlock.defaults : blocks
         panelBlock = defaults.string(forKey: Keys.panelBlock).flatMap(PanelBlock.init(rawValue:)) ?? .skills
+        menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
         lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
         skippedUpdateVersion = defaults.string(forKey: Keys.skippedUpdateVersion)
         pendingUpdateURL = defaults.string(forKey: Keys.pendingUpdateURL)
@@ -191,6 +197,7 @@ final class SettingsStore {
         static let pinnedGroups = "pinnedGroups"
         static let panelBlocks = "panelBlocks"
         static let panelBlock = "panelBlock"
+        static let menuBarStat = "menuBarStat"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
         static let skippedUpdateVersion = "skippedUpdateVersion"
         static let pendingUpdateURL = "pendingUpdateURL"

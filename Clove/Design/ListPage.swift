@@ -122,3 +122,25 @@ struct SelectableRow<ID: Hashable, Content: View>: View {
         return .clear
     }
 }
+
+/// Rows with hairlines between them, never above the first or below the last.
+/// Rows don't draw their own dividers; this decides where they go.
+struct DividedRows<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        Group(subviews: content) { subviews in
+            VStack(spacing: 0) {
+                ForEach(Array(subviews.enumerated()), id: \.element.id) { index, subview in
+                    if index > 0 {
+                        Rectangle()
+                            .fill(Palette.hairline)
+                            .frame(height: 0.5)
+                            .accessibilityHidden(true)
+                    }
+                    subview
+                }
+            }
+        }
+    }
+}

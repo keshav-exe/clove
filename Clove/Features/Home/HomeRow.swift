@@ -29,11 +29,6 @@ struct HomeRow: View {
         }
         .buttonStyle(.plain)
         .disabled(destination == nil && action == nil)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 0.5)
-        }
     }
 
     private func open() {

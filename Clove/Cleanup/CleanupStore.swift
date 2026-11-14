@@ -15,6 +15,19 @@ final class CleanupStore {
     var window: CleanupWindow = .month
     /// Candidates the person chose to keep. Everything else is selected.
     var kept: Set<CleanupCandidate.ID> = []
+    /// Kept for good: never listed again, in any scan, until the person says otherwise.
+    private(set) var alwaysKept: Set<CleanupCandidate.ID> = Set(UserDefaults.standard.stringArray(forKey: "cleanup.alwaysKept") ?? [])
+
+    func alwaysKeep(_ candidate: CleanupCandidate) {
+        alwaysKept.insert(candidate.id)
+        kept.remove(candidate.id)
+        UserDefaults.standard.set(Array(alwaysKept).sorted(), forKey: "cleanup.alwaysKept")
+    }
+
+    func stopAlwaysKeeping(_ id: CleanupCandidate.ID) {
+        alwaysKept.remove(id)
+        UserDefaults.standard.set(Array(alwaysKept).sorted(), forKey: "cleanup.alwaysKept")
+    }
     private(set) var lastResult: Result?
     private(set) var isRemoving = false
     private(set) var historyResult: HistoryResult?
@@ -41,6 +54,7 @@ final class CleanupStore {
     func candidates(in catalog: [CatalogEntry], resources: [AgentResource]) -> [CleanupCandidate] {
         guard let report = usage.value else { return [] }
         return CleanupCandidate.candidates(in: catalog, resources: resources, lastUsed: report.lastUsed, window: window)
+            .filter { !alwaysKept.contains($0.id) }
     }
 
     /// Sessions last touched before the window, oldest first.

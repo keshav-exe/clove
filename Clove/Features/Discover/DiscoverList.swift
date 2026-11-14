@@ -11,7 +11,7 @@ struct DiscoverList: View {
         let skills = store.visible.value ?? []
 
         ListPage(selection: $store.selection, order: skills.map(\.id)) {
-            PageHeader(title: "Discover", summary: "The skills.sh leaderboards. Read a skill's SKILL.md and its security audits before you install it.")
+            PageHeader(title: "Discover", summary: "Popular skills from skills.sh. See what each one does, and whether it passed security checks, before you install it.")
 
             if !skills.isEmpty {
                 ListSection(

@@ -9,7 +9,7 @@ struct HomeContextCard: View {
             title: "Context",
             symbolName: "text.document",
             value: ResourceKind.contextKinds.map { model.resources(of: $0).count }.reduce(0, +).formatted(),
-            caption: "instruction files, rules, commands, and subagents",
+            caption: "instructions and rules your agents follow",
             destination: .resources(.instructions)
         ) {
             ForEach(ResourceKind.contextKinds) { kind in

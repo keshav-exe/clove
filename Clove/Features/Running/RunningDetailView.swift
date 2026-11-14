@@ -39,7 +39,7 @@ struct RunningDetailView: View {
                 }
 
                 SkillDetailSection(title: "Command") {
-                    MarkdownCodeView(text: process.command)
+                    CommandBlock(command: process.command)
                 }
             }
             .padding(Metrics.spacingXL)
@@ -93,6 +93,44 @@ struct RunningDetailView: View {
             Text(value)
                 .font(code ? .callout.monospaced() : .callout)
                 .textSelection(.enabled)
+        }
+    }
+}
+
+/// A long command, wrapped and selectable rather than one line with a scrollbar,
+/// with a copy button where the eye ends up.
+private struct CommandBlock: View {
+    let command: String
+    @State private var copied = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Metrics.spacingS) {
+            Text(command)
+                .codeLabel(11.5)
+                .foregroundStyle(Palette.ink)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(command, forType: .string)
+                copied = true
+            }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .help("Copy the command")
+            .contentTransition(.symbolEffect(.replace))
+        }
+        .padding(Metrics.spacingM)
+        .background(Palette.surfaceSunken, in: .rect(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Palette.ring, lineWidth: 1)
+        }
+        .task(id: copied) {
+            guard copied else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            copied = false
         }
     }
 }

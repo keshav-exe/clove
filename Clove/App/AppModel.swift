@@ -67,6 +67,7 @@ final class AppModel {
     let license = LicenseStore()
     let secrets = SecretsStore()
     let running = RunningStore()
+    let containers = ContainerStore()
     private let scanner: SkillScanner
     private let persistence: TagPersistence
 

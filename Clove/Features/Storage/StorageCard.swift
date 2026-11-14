@@ -30,7 +30,8 @@ struct StorageCard: View {
     private var footerHeight: CGFloat { isCompact ? 50 : 62 }
     private var radius: CGFloat { isCompact ? 16 : 20 }
     /// White on paper, graphite in the dark: the web system's panel and chrome.
-    private static let surface = Color.dynamic(light: 0xFFFFFF, dark: 0x1B1C1F)
+    /// White on paper; in the dark, a step above the page so the card reads as raised.
+    private static let surface = Color.oklch(light: (1, 0, 0), dark: (0.27, 0.004, 265))
     private static let edgeLight = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0, darkOpacity: 0.09)
     private static let seamShade = Color.dynamic(light: 0xE6E6E8, dark: 0x000000, lightOpacity: 1, darkOpacity: 0.45)
     private static let seamLight = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightOpacity: 0, darkOpacity: 0.05)
@@ -182,11 +183,22 @@ struct StorageCard: View {
                     HStack(spacing: 6) {
                         StorageGlyph(symbol: "checkmark.circle.fill", size: 16)
                             .foregroundStyle(Palette.mint)
-                        Text("Freed \(StorageFormat.gb(freed.bytes)).")
+                        if let id = freed.record, let record = store.history.first(where: { $0.id == id }) {
+                            // Recoverable: say where it went and offer it back, right here.
+                            Text("Moved \(StorageFormat.gb(freed.bytes)) to the Trash.")
+                                .fontWeight(.medium)
+                            Button("Put Back") {
+                                Task { await store.putBack(record) }
+                            }
+                            .buttonStyle(.link)
                             .fontWeight(.medium)
-                        Text("\(StorageFormat.gb(store.available)) available")
-                            .monospacedDigit()
-                            .foregroundStyle(Color.primary.opacity(0.5))
+                        } else {
+                            Text("Freed \(StorageFormat.gb(freed.bytes)).")
+                                .fontWeight(.medium)
+                            Text("\(StorageFormat.gb(store.available)) available")
+                                .monospacedDigit()
+                                .foregroundStyle(Color.primary.opacity(0.5))
+                        }
                     }
                     .id("freed")
                 } else {
@@ -376,7 +388,9 @@ struct StorageCard: View {
                 HStack(spacing: 8) {
                     StorageGlyph(symbol: clean.kind.symbol, size: 16)
                         .foregroundStyle(clean.kind.paperTint)
-                    Text(isCompact ? clean.shortLine(StorageFormat.gb(store.bytes(of: clean.kind))) : clean.line(StorageFormat.gb(store.bytes(of: clean.kind))))
+                    // The amount this button will actually clear, the same number Home quotes.
+                    let size = StorageFormat.gb(clean == .caches ? store.clearableBytes(for: .caches) : store.bytes(of: clean.kind))
+                    Text(isCompact ? clean.shortLine(size) : clean.line(size))
                         .foregroundStyle(Color.primary.opacity(0.88))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -450,7 +464,9 @@ struct StorageCard: View {
 
     private var confirmTitle: String {
         switch store.pendingClean {
-        case .caches: "Clear \(StorageFormat.gb(store.clearableBytes(for: .caches))) of caches?"
+        case .caches: store.trashFirst
+            ? "Move \(StorageFormat.gb(store.clearableBytes(for: .caches))) of caches to the Trash?"
+            : "Delete \(StorageFormat.gb(store.clearableBytes(for: .caches))) of caches?"
         case .trash: "Empty the Trash?"
         case nil: ""
         }
@@ -459,7 +475,9 @@ struct StorageCard: View {
     private func confirmMessage(_ clean: StorageClean) -> String {
         switch clean {
         case .caches:
-            "Apps rebuild their caches when they need them, so some may open a little slower the first time. Caches for open apps and for macOS itself are left alone."
+            store.trashFirst
+                ? "They go to the Trash first, so you can put them back from here until you empty it. Caches for open apps, for macOS, and folders you keep are left alone."
+                : "They're deleted straight away. Apps rebuild them when they need them. Caches for open apps, for macOS, and folders you keep are left alone."
         case .trash:
             "\(StorageFormat.gb(store.bytes(of: .trash))) will be erased for good. You can't undo this."
         }

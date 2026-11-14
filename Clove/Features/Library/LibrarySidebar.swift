@@ -19,13 +19,14 @@ struct LibrarySidebar: View {
             Section {
                 Label("Home", systemImage: "house")
                     .tag(SidebarItem.home)
-                RunningSidebarRow()
-                CleanupSidebarRow()
+                // The Mac first, then what agents leave behind, then what's live.
                 StorageSidebarRow()
+                CleanupSidebarRow()
+                RunningSidebarRow()
             }
 
             Section("Skills", isExpanded: $showsSkills) {
-                LibrarySidebarRow(filter: .all, tint: .accentColor)
+                LibrarySidebarRow(filter: .all)
                 Label("Discover", systemImage: "safari")
                     .tag(SidebarItem.discover)
 
@@ -87,8 +88,10 @@ struct LibrarySidebar: View {
             }
         }
         // At the foot of the sidebar, like Claude and Mail: the toolbar above
-        // a narrow sidebar pushed it into the overflow menu.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // a narrow sidebar pushed it into the overflow menu. A safe-area bar, so
+        // the list fades under it with the system's scroll edge instead of
+        // showing through it.
+        .safeAreaBar(edge: .bottom, spacing: 0) {
             SettingsLink {
                 Label("Settings", systemImage: "gearshape")
                     .frame(maxWidth: .infinity, alignment: .leading)
