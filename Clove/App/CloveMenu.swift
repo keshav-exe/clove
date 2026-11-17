@@ -40,9 +40,11 @@ final class CloveMenu: NSObject, NSMenuDelegate {
             panel.keyEquivalentModifierMask = chord.modifiers.cocoaFlags
         }
 
-        menu.addItem(.separator())
-        for (title, symbol, destination) in Self.places {
-            show(title, symbol: symbol, destination: destination, in: menu)
+        for group in Self.places {
+            menu.addItem(.separator())
+            for (title, symbol, destination) in group {
+                show(title, symbol: symbol, destination: destination, in: menu)
+            }
         }
 
         menu.addItem(.separator())
@@ -63,13 +65,18 @@ final class CloveMenu: NSObject, NSMenuDelegate {
         quit.keyEquivalent = "q"
     }
 
-    private static let places: [(String, String, SidebarItem)] = [
-        ("Home", "house", .home),
-        ("Storage", "internaldrive", .storage),
-        ("Cleanup", "leaf", .cleanup),
-        ("Running", "waveform.path.ecg", .running),
-        ("Skills", "square.stack.3d.up", .library(.all)),
-        ("Discover", "safari", .discover),
+    /// Grouped as the sidebar is: home, this Mac, then skills.
+    private static let places: [[(String, String, SidebarItem)]] = [
+        [("Home", "house", .home)],
+        [
+            ("Activity", "waveform.path.ecg", .running),
+            ("Storage", "internaldrive", .storage),
+        ],
+        [
+            ("Skills", "square.stack.3d.up", .library(.all)),
+            ("Discover", "safari", .discover),
+            ("Cleanup", "leaf", .cleanup),
+        ],
     ]
 
     private func submenu(_ title: String, symbol: String, kinds: [ResourceKind]) -> NSMenuItem {

@@ -18,6 +18,8 @@ struct StoragePage: View {
                 }
             }
 
+            SafeToDeleteTile()
+
             Tile {
                 TileHeader(
                     title: storage.pinned.map { "Largest in \($0.title)" } ?? "Largest on this Mac",
@@ -100,6 +102,9 @@ struct StoragePage: View {
         }
         .task {
             await storage.scanIfNeeded()
+        }
+        .task {
+            await storage.scanTempIfNeeded()
         }
     }
 

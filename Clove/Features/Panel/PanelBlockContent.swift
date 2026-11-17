@@ -10,7 +10,6 @@ struct PanelBlockContent: View {
         case .now: NowTab()
         case .skills: SkillsPanel()
         case .storage: StorageBlock()
-        case .cleanup: CleanupBlock()
         case .trending: TrendingBlock()
         }
     }
@@ -94,87 +93,6 @@ struct StorageBlock: View {
         .padding(.bottom, 10)
         .task {
             await storage.scanIfNeeded()
-        }
-    }
-}
-
-struct CleanupBlock: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.closePanel) private var closePanel
-
-    var body: some View {
-        let candidates = model.cleanupCandidates
-        let tokens = candidates.reduce(0) { $0 + $1.tokens }
-        let leftovers = (model.cleanup.leftovers.value ?? []).filter(\.isOutdated).reduce(Int64(0)) { $0 + $1.bytes }
-
-        VStack(alignment: .leading, spacing: 0) {
-            Color.clear.frame(height: 6)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(tokens, format: .number)
-                    .font(.system(size: 40, weight: .semibold).monospacedDigit())
-                    .contentTransition(.numericText(value: Double(tokens)))
-                Text(candidates.isEmpty ? "Every skill and command was used recently." : "tokens every session spends listing skills and commands nobody has called lately")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 14)
-
-            VStack(spacing: 1) {
-                ForEach(Array(candidates.sorted { $0.tokens > $1.tokens }.prefix(4))) { candidate in
-                    PanelBlockRow {
-                        openInClove(model, .cleanup, closePanel: closePanel)
-                    } content: {
-                        HStack {
-                            Text(candidate.displayName)
-                                .font(.system(size: 12.5, weight: .medium))
-                                .lineLimit(1)
-                            Spacer(minLength: 8)
-                            Text("\(candidate.tokens.formatted()) tokens")
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                if leftovers > 0 {
-                    PanelBlockRow {
-                        openInClove(model, .cleanup, closePanel: closePanel)
-                    } content: {
-                        HStack {
-                            Label("Agent leftovers", systemImage: "shippingbox")
-                                .font(.system(size: 12.5, weight: .medium))
-                            Spacer(minLength: 8)
-                            Text(leftovers.formatted(.byteCount(style: .file)))
-                                .font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 6)
-
-            Spacer(minLength: 8)
-
-            if !candidates.isEmpty {
-                Button {
-                    openInClove(model, .cleanup, closePanel: closePanel)
-                } label: {
-                    Text("Review \(candidates.count) in Clove")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
-            }
-        }
-        .task {
-            await model.cleanup.scanIfNeeded()
-        }
-        .task {
-            await model.cleanup.scanLeftovers()
         }
     }
 }

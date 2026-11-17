@@ -157,8 +157,10 @@ private extension AnyTransition {
 
 // MARK: - Ears
 
-/// Shown only while an agent works: the app it's working in on the left, and
-/// on the right how many are at it, or a quiet pulse when it's just the one.
+/// Shown only while an agent works: the apps it's working in on the left,
+/// fanned out when there are several, and on the right how many are at it.
+/// Nothing here animates on its own: a looping animation would redraw the
+/// island every frame for as long as an agent works, which is most of the day.
 private struct LiveEars: View {
     @Environment(NotchModel.self) private var notch
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -168,13 +170,12 @@ private struct LiveEars: View {
 
         HStack(spacing: 0) {
             ZStack {
-                if let first = working.first {
-                    AgentAppIcon(session: first, size: 18)
-                        .id(first.id)
+                if !working.isEmpty {
+                    AgentIconStack(sessions: working, size: NotchModel.earIconSize)
                         .transition(reduceMotion ? .identity : .earContent)
                 }
             }
-            .frame(width: NotchModel.earWidth)
+            .frame(width: notch.earWidth)
 
             Color.clear
                 .frame(width: notch.notchSize.width)
@@ -187,11 +188,13 @@ private struct LiveEars: View {
                         .contentTransition(.numericText())
                         .transition(reduceMotion ? .identity : .earContent)
                 } else if !working.isEmpty {
-                    WorkingPulse()
+                    Circle()
+                        .fill(Palette.mint)
+                        .frame(width: 6, height: 6)
                         .transition(reduceMotion ? .identity : .earContent)
                 }
             }
-            .frame(width: NotchModel.earWidth)
+            .frame(width: notch.earWidth)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)

@@ -11,12 +11,13 @@ struct NowBoard: View {
     var body: some View {
         let sessions = Array(notch.agents.sessions.prefix(3))
         let servers = model.running.items(of: .devServer)
+        let busy = Array(model.running.activity.filter { $0.cpu >= Self.busyPercent && !$0.isClove }.prefix(3))
 
         Group {
-            if sessions.isEmpty && servers.isEmpty {
+            if sessions.isEmpty && servers.isEmpty && busy.isEmpty {
                 empty
             } else {
-                list(sessions: sessions, servers: servers)
+                list(sessions: sessions, servers: servers, busy: busy)
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
@@ -24,13 +25,19 @@ struct NowBoard: View {
         .animation(reduceMotion ? nil : .spring(duration: 0.32, bounce: 0.1), value: servers.map(\.id))
     }
 
-    private func list(sessions: [AgentSession], servers: [RunningProcess]) -> some View {
+    /// Half a core, kept up: enough to warm a Mac, and worth a line.
+    static let busyPercent: Double = 50
+
+    private func list(sessions: [AgentSession], servers: [RunningProcess], busy: [AppActivity]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(sessions) { session in
                 AgentCard(session: session)
             }
             if !servers.isEmpty {
                 ServerList(servers: Array(servers.prefix(6)))
+            }
+            if !busy.isEmpty {
+                BusyLine(groups: busy)
             }
             elsewhere
         }
@@ -48,7 +55,7 @@ struct NowBoard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("All quiet")
                     .font(.system(size: 13, weight: .semibold))
-                Text("Agents at work and dev servers show up here while they run.")
+                Text("Agents at work, dev servers, and anything working your Mac hard show up here.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -87,7 +94,7 @@ struct NowBoard: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .help("Show everything running in Clove")
+            .help("Show everything running in Activity")
         }
     }
 }
@@ -106,13 +113,11 @@ private struct NowCompactLabelStyle: LabelStyle {
 
 /// One conversation: who, where, what it's doing, and the file it's changing.
 private struct AgentCard: View {
-    @Environment(AppModel.self) private var model
     @Environment(\.closePanel) private var closePanel
     let session: AgentSession
+    @State private var isHovered = false
 
     var body: some View {
-        let host = HostApp.forAgent(in: session.folder, running: model.running)
-
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 header
@@ -124,41 +129,45 @@ private struct AgentCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                        .transition(.blurReplace)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if let change = session.change {
                 ChangeChip(change: change)
+                    // A new file swaps in through a soft blur, like a page turning.
+                    .id(change.name)
+                    .transition(.blurReplace)
             }
         }
+        .animation(.smooth(duration: 0.35), value: session.change?.name)
+        .animation(.smooth(duration: 0.3), value: session.steps.map(\.id))
+        .animation(.smooth(duration: 0.3), value: session.state)
         .padding(12)
-        .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 16, style: .continuous))
+        .background(Color.primary.opacity(isHovered ? 0.09 : 0.06), in: .rect(cornerRadius: 16, style: .continuous))
         .overlay(alignment: .topTrailing) {
-            if let host, session.change == nil {
-                Button {
-                    closePanel()
-                    host.activate()
-                } label: {
-                    Image(systemName: "arrow.up.forward.app")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .help("Show in \(host.localizedName ?? "its app")")
-                .padding(6)
+            if session.change == nil {
+                Image(systemName: "arrow.up.forward")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isHovered ? .secondary : .tertiary)
+                    .frame(width: 28, height: 28)
+                    .padding(6)
+                    .accessibilityHidden(true)
             }
         }
         .contentShape(.rect(cornerRadius: 16))
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
         .onTapGesture {
-            guard let host else { return }
             closePanel()
-            host.activate()
+            AgentReveal.show(session)
         }
+        .help("Open this conversation in \(session.host?.name ?? "its app")")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(session.agent.title) in \(session.project), \(session.statusText)")
+        .accessibilityHint("Opens the conversation in \(session.host?.name ?? "its app")")
+        .accessibilityAddTraits(.isButton)
     }
 
     /// The app it's running in, the conversation's name, then who and where
@@ -175,12 +184,18 @@ private struct AgentCard: View {
                     StatusDot(state: session.state)
                     Spacer(minLength: 0)
                 }
-                Text([session.agent.title, session.title == nil ? nil : session.project, stateWord].compactMap(\.self).joined(separator: " · "))
+                Text([who, session.title == nil ? nil : session.project, stateWord].compactMap(\.self).joined(separator: " · "))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
+    }
+
+    /// "Claude in T3 Code" says both the model's maker and where to find it.
+    private var who: String {
+        guard let host = session.host, !host.name.localizedCaseInsensitiveContains(session.agent.title) else { return session.agent.title }
+        return "\(session.agent.title) in \(host.name)"
     }
 
     private var stateWord: String {
@@ -194,7 +209,8 @@ private struct AgentCard: View {
     private var steps: some View {
         VStack(alignment: .leading, spacing: 4) {
             let recent = session.steps.suffix(2)
-            if recent.isEmpty {
+            let jobs = session.backgroundJobs.count
+            if recent.isEmpty, jobs == 0 {
                 StepRow(symbol: "ellipsis", text: "Thinking", isCurrent: true)
             }
             ForEach(Array(recent)) { step in
@@ -203,7 +219,11 @@ private struct AgentCard: View {
                     text: [step.verb, step.target].compactMap(\.self).joined(separator: " "),
                     isCurrent: !step.isDone
                 )
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(.blurReplace.combined(with: .move(edge: .bottom)))
+            }
+            if jobs > 0, session.currentStep == nil {
+                StepRow(symbol: "hourglass", text: "Waiting on \(jobs) background task\(jobs == 1 ? "" : "s")", isCurrent: true)
+                    .transition(.blurReplace)
             }
         }
     }
@@ -297,6 +317,50 @@ private struct StatusDot: View {
             }
         }
         .frame(width: 6, height: 6)
+    }
+}
+
+// MARK: - Busy
+
+/// The apps working the Mac hardest right now, when any are: the usual reason
+/// a laptop gets warm.
+private struct BusyLine: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.closePanel) private var closePanel
+    let groups: [AppActivity]
+    @State private var isHovered = false
+
+    var body: some View {
+        Button {
+            openInClove(model, .running, closePanel: closePanel)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "flame")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Palette.Vivid.orange)
+                    .frame(width: 12)
+                Text(groups.map { "\($0.name) \(MacStatusTile.cpu($0.cpu))" }.joined(separator: " · "))
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 6)
+                Text("Busy")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(Color.primary.opacity(isHovered ? 0.09 : 0.06), in: .rect(cornerRadius: 10, style: .continuous))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
+        .help("See what's using your Mac in Activity")
+        .accessibilityLabel("Busy: " + groups.map { "\($0.name), \(MacStatusTile.cpu($0.cpu)) processor" }.joined(separator: "; "))
     }
 }
 

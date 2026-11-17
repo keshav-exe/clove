@@ -53,8 +53,10 @@ enum AgentTranscriptReader {
                 if let prompt = message["content"] as? String {
                     if isInterruption(prompt) {
                         session.state = .interrupted
+                    } else if let job = finishedJob(prompt) {
+                        session.backgroundJobs.remove(job)
                     } else if !isSystemText(prompt) {
-                        startTurn(&session)
+                        startTurn(&session, entry: entry)
                         sawTurn = true
                     }
                     continue
@@ -71,6 +73,8 @@ enum AgentTranscriptReader {
                         let text = block["text"] as? String ?? ""
                         if isInterruption(text) {
                             session.state = .interrupted
+                        } else if let job = finishedJob(text) {
+                            session.backgroundJobs.remove(job)
                         } else if !isSystemText(text) {
                             startsTurn = true
                         }
@@ -79,28 +83,40 @@ enum AgentTranscriptReader {
                     }
                 }
                 if startsTurn {
-                    startTurn(&session)
+                    startTurn(&session, entry: entry)
                     sawTurn = true
                 }
             } else if type == "assistant" {
                 sawTurn = true
+                // A request that failed for good (a usage limit, an outage) ends the task.
+                if entry["isApiErrorMessage"] as? Bool == true {
+                    let text = (message["content"] as? [[String: Any]])?.compactMap { $0["text"] as? String }.first
+                    session.failure = text.flatMap(firstLine) ?? "The request failed."
+                    session.state = .finished
+                    session.asksQuestion = false
+                    continue
+                }
                 session.state = .working
                 for block in message["content"] as? [[String: Any]] ?? [] {
                     switch block["type"] as? String {
                     case "tool_use":
                         let name = block["name"] as? String ?? "Tool"
                         let input = block["input"] as? [String: Any] ?? [:]
-                        addStep(id: block["id"] as? String ?? UUID().uuidString, tool: name, input: input, to: &session)
+                        let id = block["id"] as? String ?? UUID().uuidString
+                        addStep(id: id, tool: name, input: input, to: &session)
+                        if input["run_in_background"] as? Bool == true { session.backgroundJobs.insert(id) }
                     case "text":
                         if let text = block["text"] as? String, let line = firstLine(text) {
                             session.summary = line
+                            session.asksQuestion = lastLine(text)?.hasSuffix("?") == true
                         }
                     default:
                         break
                     }
                 }
+                // The turn ending isn't the task ending while background work is still out.
                 if message["stop_reason"] as? String == "end_turn", session.currentStep == nil {
-                    session.state = .finished
+                    session.state = session.backgroundJobs.isEmpty ? .finished : .working
                 }
             }
         }
@@ -171,7 +187,7 @@ enum AgentTranscriptReader {
             case "event_msg":
                 switch kind {
                 case "task_started", "user_message":
-                    if !sawTurn || session.state != .working { startTurn(&session) }
+                    if !sawTurn || session.state != .working { startTurn(&session, entry: entry) }
                     sawTurn = true
                 case "task_complete":
                     sawTurn = true
@@ -179,6 +195,7 @@ enum AgentTranscriptReader {
                     for index in session.steps.indices { session.steps[index].isDone = true }
                     if let text = payload["last_agent_message"] as? String, let line = firstLine(text) {
                         session.summary = line
+                        session.asksQuestion = lastLine(text)?.hasSuffix("?") == true
                     }
                 case "turn_aborted":
                     session.state = .interrupted
@@ -241,11 +258,30 @@ enum AgentTranscriptReader {
 
     // MARK: - Shared
 
-    private static func startTurn(_ session: inout AgentSession) {
+    private static func startTurn(_ session: inout AgentSession, entry: [String: Any]) {
         session.state = .working
         session.steps = []
         session.change = nil
         session.summary = nil
+        session.failure = nil
+        session.asksQuestion = false
+        session.backgroundJobs = []
+        let timestamp = entry["timestamp"] as? String
+        session.promptID = entry["uuid"] as? String ?? timestamp
+        session.startedAt = timestamp.flatMap { try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse($0) }
+    }
+
+    /// The tool call a `<task-notification>` reports on: a background command
+    /// or subagent the agent started, now done.
+    static func finishedJob(_ text: String) -> String? {
+        guard text.hasPrefix("<task-notification>"),
+              let start = text.range(of: "<tool-use-id>"),
+              let end = text.range(of: "</tool-use-id>", range: start.upperBound..<text.endIndex) else { return nil }
+        return String(text[start.upperBound..<end.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func lastLine(_ text: String) -> String? {
+        text.split(separator: "\n").lazy.map { $0.trimmingCharacters(in: .whitespaces) }.last { !$0.isEmpty }
     }
 
     private static func markDone(_ id: String, in session: inout AgentSession) {

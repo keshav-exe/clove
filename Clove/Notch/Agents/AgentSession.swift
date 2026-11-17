@@ -59,6 +59,25 @@ struct AgentSession: Identifiable, Equatable, Sendable {
     /// The agent's last words, for a finished turn.
     var summary: String?
     var updatedAt: Date
+    /// The app it's running in, once Clove has found it.
+    var host: AgentHost? = nil
+    /// The message that started the current task, so a task is announced once
+    /// however many times the agent pauses inside it.
+    var promptID: String? = nil
+    /// When you sent that message.
+    var startedAt: Date? = nil
+    /// Background commands and subagents it started this task that haven't
+    /// reported back. The task isn't done while any are out.
+    var backgroundJobs: Set<String> = []
+    /// Why it stopped, when it stopped on an error rather than finishing.
+    var failure: String? = nil
+    /// Its last words end in a question: it's waiting on you, not done.
+    var asksQuestion = false
+
+    /// How long the task took, once it's over.
+    var duration: TimeInterval? {
+        startedAt.map { updatedAt.timeIntervalSince($0) }
+    }
 
     var project: String {
         folder?.lastPathComponent ?? agent.title

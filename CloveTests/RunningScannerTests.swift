@@ -57,9 +57,7 @@ struct RunningScannerTests {
         #expect(ProcessTable.elapsed("1-00:00:01") == 86_401)
     }
 
-    @Test func readsListeningPorts() {
-        let lsof = "p123\nn127.0.0.1:3000\nn[::1]:3000\np456\nn*:8080\n"
-        #expect(RunningScanner.listeningPorts(lsof) == [123: [3000], 456: [8080]])
+    @Test func namesPackages() {
         #expect(RunningScanner.packageName("@playwright/mcp@latest") == "@playwright/mcp")
         #expect(RunningScanner.packageName("shadcn@latest") == "shadcn")
     }

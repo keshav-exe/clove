@@ -90,3 +90,27 @@ struct LibraryWindowAccessor: NSViewRepresentable {
         }
     }
 }
+
+/// Runs a page's live work only while Clove's window is on screen. Closing the
+/// window only hides it, so a plain `.task` would keep polling forever.
+private struct WhileWindowVisible: ViewModifier {
+    let work: @MainActor @Sendable () async -> Void
+    @State private var isVisible = LibraryWindowTracker.shared.isLibraryVisible
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .libraryWindowVisibilityDidChange)) { _ in
+                isVisible = LibraryWindowTracker.shared.isLibraryVisible
+            }
+            .task(id: isVisible) {
+                guard isVisible else { return }
+                await work()
+            }
+    }
+}
+
+extension View {
+    func whileWindowVisible(_ work: @escaping @MainActor @Sendable () async -> Void) -> some View {
+        modifier(WhileWindowVisible(work: work))
+    }
+}

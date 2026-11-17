@@ -547,8 +547,80 @@ final class StorageStore {
                 ? "Nothing could go back: it's no longer in the Trash, or something new is in its place."
                 : "\(result.restored) went back. \(result.missing) couldn't: no longer in the Trash, or something new is in its place."
         }
+        // Something put back may be leftover data again: look for it next time.
+        tempFindings = .idle
         let touched = Set(moves.compactMap { kind(containing: $0.original) })
         await remeasure(touched.union([.trash]))
+    }
+
+    // MARK: - Safe to delete
+
+    /// Leftover data outside the caches folder that's safe to remove, found
+    /// once per launch when Storage is first opened.
+    private(set) var tempFindings: Loadable<[TempFinding]> = .idle
+    /// The spot being moved to the Trash right now.
+    private(set) var clearingSpot: TempSpot.ID?
+
+    func scanTempIfNeeded() async {
+        guard case .idle = tempFindings else { return }
+        await scanTemp()
+    }
+
+    func scanTemp() async {
+        tempFindings = .loading
+        let found = await Task.detached(priority: .utility) { TempDataScanner.scan() }.value
+        tempFindings = .loaded(found.filter { finding in !finding.targets.allSatisfy { isKept(path: $0.url) } })
+    }
+
+    /// Moves a spot's contents to the Trash, as one entry in Recently cleared.
+    func clear(_ finding: TempFinding) async {
+        guard clearingSpot == nil, phase == .idle else { return }
+        clearingSpot = finding.id
+        let targets = finding.targets.filter { !isKept(path: $0.url) }
+        let result = await Task.detached(priority: .userInitiated) {
+            var moves: [StorageSafety.Move] = []
+            var failures = 0
+            for target in targets {
+                let moved = StorageSafety.trash(target.url, inside: target.root, emptyingFolder: false)
+                moves += moved.moves
+                failures += moved.failures
+            }
+            return (moves, failures)
+        }.value
+        let (moves, failures) = result
+        let movedPaths = Set(moves.map { StorageSafety.trimmedPath($0.original) })
+        let cleared = targets.filter { movedPaths.contains(StorageSafety.trimmedPath($0.url)) }.reduce(Int64(0)) { $0 + $1.bytes }
+
+        var recordID: ClearRecord.ID?
+        if !moves.isEmpty {
+            let record = ClearRecord(id: UUID(), date: .now, title: finding.spot.title, bytes: cleared, moves: moves)
+            remember(record)
+            recordID = record.id
+        }
+        // The bytes move to the end of the bar, into the Trash.
+        for target in targets where movedPaths.contains(StorageSafety.trimmedPath(target.url)) {
+            if let kind = kind(containing: target.url) { live[kind] = max(0, (live[kind] ?? 0) - target.bytes) }
+        }
+        live[.trash] = (live[.trash] ?? 0) + cleared
+        if let kind = finding.targets.first.flatMap({ kind(containing: $0.url) }) {
+            freed = Freed(kind: kind, bytes: cleared, record: recordID)
+        }
+        if var findings = tempFindings.value {
+            findings.removeAll { $0.id == finding.id }
+            tempFindings = .loaded(findings)
+        }
+        clearingSpot = nil
+        if failures > 0 {
+            failure = failures == 1
+                ? "One item in \(finding.spot.title) couldn't be moved. It may be in use."
+                : "\(failures) items in \(finding.spot.title) couldn't be moved. They may be in use."
+        }
+        saveSnapshot()
+    }
+
+    private func isKept(path url: URL) -> Bool {
+        let path = StorageSafety.trimmedPath(url)
+        return kept.contains { path == $0 || path.hasPrefix($0 + "/") }
     }
 
     private func kind(containing url: URL) -> StorageKind? {

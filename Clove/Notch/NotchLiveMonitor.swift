@@ -15,8 +15,8 @@ final class NotchLiveMonitor {
     init(model: AppModel, notch: NotchModel) {
         self.model = model
         self.notch = notch
-        notch.agents.onFinished = { [weak self] session in
-            self?.agentFinished(session)
+        notch.agents.onFinished = { [weak self] sessions in
+            self?.agentsFinished(sessions)
         }
     }
 
@@ -36,25 +36,55 @@ final class NotchLiveMonitor {
 
     // MARK: - Agents
 
-    private func agentFinished(_ session: AgentSession) {
+    /// Quick replies take less than this; you were likely watching anyway.
+    static let shortTask: TimeInterval = 10
+
+    private func agentsFinished(_ sessions: [AgentSession]) {
         guard model.settings.notchAgentMoments else { return }
-        let host = HostApp.forAgent(in: session.folder, running: model.running)
-        notch.present(NotchMoment(
-            symbol: "checkmark",
-            tone: .done,
-            title: "\(session.agent.title) finished in \(session.project)",
-            detail: session.summary ?? session.title,
-            action: host.map { app in
-                NotchMoment.Action(title: "Show") { app.activate() }
-            },
-            duration: .seconds(6)
-        ))
+        let front = NSWorkspace.shared.frontmostApplication?.bundleURL?.path(percentEncoded: false)
+        let worth = sessions.filter { session in
+            // An error is always worth saying; otherwise skip what you're already looking at.
+            if session.failure != nil { return true }
+            if let host = session.host?.bundlePath, let front, front.hasPrefix(host) { return false }
+            return (session.duration ?? .infinity) >= Self.shortTask
+        }
+        guard let first = worth.first else { return }
+
+        if worth.count > 1 {
+            notch.present(NotchMoment(
+                symbol: "checkmark",
+                tone: worth.contains { $0.failure != nil } ? .warning : .done,
+                title: "\(worth.count) agents finished",
+                detail: worth.map(\.project).joined(separator: ", "),
+                duration: .seconds(6)
+            ))
+            return
+        }
+
+        let session = first
+        let who = session.agent.title
+        let show = NotchMoment.Action(title: "Show") { AgentReveal.show(session) }
+        if let failure = session.failure {
+            notch.present(NotchMoment(symbol: "exclamationmark.triangle", tone: .warning, title: "\(who) stopped in \(session.project)", detail: failure, action: show, duration: .seconds(8)))
+        } else if session.asksQuestion {
+            notch.present(NotchMoment(symbol: "questionmark.bubble", tone: .neutral, title: "\(who) has a question in \(session.project)", detail: session.summary ?? session.title, action: show, duration: .seconds(8)))
+        } else {
+            let took = session.duration.flatMap(Self.durationText).map { " · \($0)" } ?? ""
+            notch.present(NotchMoment(symbol: "checkmark", tone: .done, title: "\(who) finished in \(session.project)\(took)", detail: session.summary ?? session.title, action: show, duration: .seconds(6)))
+        }
+    }
+
+    /// "4 min", "1 hr 5 min": how long the whole task ran, background work included.
+    nonisolated static func durationText(_ seconds: TimeInterval) -> String? {
+        guard seconds >= 60 else { return nil }
+        return Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
     }
 
     // MARK: - Servers
 
-    /// Looks every few seconds, faster while the board is on screen. The same
-    /// look keeps the Now board and the Running block current.
+    /// Looks every ten seconds, every two while the board is on screen. The
+    /// same look keeps the Now board and the Running block current. A look is
+    /// a few milliseconds of kernel reads, and it waits out sleep and a hot Mac.
     private func watchServers() async {
         while !Task.isCancelled {
             if model.settings.notchServerMoments || notch.isExpanded {
@@ -63,7 +93,8 @@ final class NotchLiveMonitor {
                 guard !Task.isCancelled else { return }
                 compareServers(stoppedByYou: stopping)
             }
-            try? await Task.sleep(for: notch.isExpanded ? .seconds(2) : .seconds(5))
+            let hot = ProcessInfo.processInfo.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+            try? await Task.sleep(for: notch.isExpanded ? .seconds(2) : .seconds(hot ? 30 : 10))
         }
     }
 

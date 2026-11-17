@@ -1,7 +1,7 @@
 import Foundation
 
 /// Finds agent sessions, the MCP servers they started, and dev servers still
-/// listening on a port, from one `ps` and one `lsof` snapshot.
+/// listening on a port, from one look at your processes.
 enum RunningScanner {
     /// A configured MCP server's name and a piece of its command line to match on.
     struct KnownServer: Sendable {
@@ -9,34 +9,31 @@ enum RunningScanner {
         let signature: String
     }
 
+    struct Scan: Sendable {
+        let processes: [RunningProcess]
+        let sample: ProcessSample
+    }
+
     @concurrent
-    static func scan(known: [KnownServer]) async -> [RunningProcess] {
-        let table = ProcessTable.parse(
-            run("/bin/ps", ["-axo", "pid=,ppid=,etime=,rss=,args="]),
-            executables: run("/bin/ps", ["-axo", "pid=,comm="])
-        )
-        let ports = listeningPorts(run("/usr/sbin/lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]))
-        let found = classify(table: table, ports: ports, known: known)
-        let folders = workingFolders(for: found.map(\.pid))
-        return found.map { item in
+    static func scan(known: [KnownServer]) async -> Scan {
+        let sample = await ProcessMonitor.shared.sample()
+        let found = classify(table: sample.table, ports: sample.ports, known: known)
+        let processes = found.map { item in
             RunningProcess(
                 pid: item.pid, kind: item.kind, name: item.name, startedBy: item.startedBy,
                 command: item.command, startedAt: item.startedAt, memoryBytes: item.memoryBytes,
-                ports: item.ports, folder: folders[item.pid]
+                ports: item.ports, folder: ProcessMonitor.workingFolder(of: item.pid).map { URL(filePath: $0, directoryHint: .isDirectory) }
             )
         }
+        return Scan(processes: processes, sample: sample)
     }
 
     /// What kind each running server or agent is, and nothing else: the menu bar
-    /// count needs no folders, so it skips the extra `lsof` that finds them.
+    /// count needs no folders. Shares a recent look with anything else watching.
     @concurrent
     static func kinds(known: [KnownServer]) async -> [RunningProcess.Kind] {
-        let table = ProcessTable.parse(
-            run("/bin/ps", ["-axo", "pid=,ppid=,etime=,rss=,args="]),
-            executables: run("/bin/ps", ["-axo", "pid=,comm="])
-        )
-        let ports = listeningPorts(run("/usr/sbin/lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"]))
-        return classify(table: table, ports: ports, known: known).map(\.kind)
+        let sample = await ProcessMonitor.shared.sample(maxAge: .seconds(5))
+        return classify(table: sample.table, ports: sample.ports, known: known).map(\.kind)
     }
 
     // MARK: - Classification
@@ -118,6 +115,8 @@ enum RunningScanner {
     static func isMCPServer(_ entry: ProcessTable.Entry) -> Bool {
         // App helper processes (Cursor's MCP host, Electron plugin hosts) and
         // the system's own tools are never servers an agent added.
+        // Most processes never mention MCP: skip them before the costlier checks.
+        guard entry.args.range(of: "mcp", options: .caseInsensitive) != nil else { return false }
         if entry.args.hasPrefix("Cursor Helper") || entry.program.contains(" Helper") { return false }
         let path = entry.executable ?? entry.args
         if ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/"].contains(where: path.hasPrefix) { return false }
@@ -164,55 +163,5 @@ enum RunningScanner {
             }
         }
         return nil
-    }
-
-    // MARK: - System tools
-
-    /// `lsof -Fpn` output: `p<pid>` then `n<address:port>` lines.
-    static func listeningPorts(_ output: String) -> [Int32: [Int]] {
-        var ports: [Int32: Set<Int>] = [:]
-        var current: Int32?
-        for line in output.split(separator: "\n") {
-            if line.hasPrefix("p") {
-                current = Int32(line.dropFirst())
-            } else if line.hasPrefix("n"), let pid = current,
-                      let colon = line.lastIndex(of: ":"), let port = Int(line[line.index(after: colon)...]) {
-                ports[pid, default: []].insert(port)
-            }
-        }
-        return ports.mapValues { $0.sorted() }
-    }
-
-    private static func workingFolders(for pids: [Int32]) -> [Int32: URL] {
-        guard !pids.isEmpty else { return [:] }
-        let output = run("/usr/sbin/lsof", ["-a", "-d", "cwd", "-Fpn", "-p", pids.map(String.init).joined(separator: ",")])
-        var folders: [Int32: URL] = [:]
-        var current: Int32?
-        for line in output.split(separator: "\n") {
-            if line.hasPrefix("p") {
-                current = Int32(line.dropFirst())
-            } else if line.hasPrefix("n"), let pid = current {
-                let path = String(line.dropFirst())
-                if path != "/" { folders[pid] = URL(filePath: path) }
-            }
-        }
-        return folders
-    }
-
-    private static func run(_ executable: String, _ arguments: [String]) -> String {
-        let process = Process()
-        process.executableURL = URL(filePath: executable)
-        process.arguments = arguments
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-        } catch {
-            return ""
-        }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return String(decoding: data, as: UTF8.self)
     }
 }

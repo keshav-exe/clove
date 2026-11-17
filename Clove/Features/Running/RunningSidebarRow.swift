@@ -4,7 +4,7 @@ struct RunningSidebarRow: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Label("Running", systemImage: "waveform.path.ecg")
+        Label("Activity", systemImage: "waveform.path.ecg")
             .badge(badge)
             .tag(SidebarItem.running)
     }

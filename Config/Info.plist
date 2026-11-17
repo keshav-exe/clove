@@ -15,5 +15,7 @@
 	<true/>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Clove brings the terminal tab an agent is working in to the front when you click it in the notch.</string>
 </dict>
 </plist>

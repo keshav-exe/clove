@@ -5,6 +5,7 @@ struct LibrarySidebar: View {
     @State private var isCreatingGroup = false
     @State private var newGroupName = ""
     // Collapsed sections stay collapsed across launches.
+    @AppStorage("sidebar.mac") private var showsMac = true
     @AppStorage("sidebar.skills") private var showsSkills = true
     @AppStorage("sidebar.locations") private var showsLocations = false
     @AppStorage("sidebar.groups") private var showsGroups = true
@@ -15,21 +16,24 @@ struct LibrarySidebar: View {
         @Bindable var model = model
 
         List(selection: $model.sidebarSelection) {
-            // Places that span everything, without a header.
             Section {
                 Label("Home", systemImage: "house")
                     .tag(SidebarItem.home)
-                // The Mac first, then what agents leave behind, then what's live.
-                StorageSidebarRow()
-                CleanupSidebarRow()
+            }
+
+            // The machine itself: what's running, what's on the disk, what's left behind.
+            Section("This Mac", isExpanded: $showsMac) {
                 RunningSidebarRow()
+                StorageSidebarRow()
                 WorktreesSidebarRow()
             }
 
+            // Everything about skills in one place, cleanup included: it's skills it cleans up.
             Section("Skills", isExpanded: $showsSkills) {
                 LibrarySidebarRow(filter: .all)
                 Label("Discover", systemImage: "safari")
                     .tag(SidebarItem.discover)
+                CleanupSidebarRow()
 
                 if !model.availableSources.isEmpty {
                     DisclosureGroup(isExpanded: $showsLocations) {

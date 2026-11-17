@@ -6,17 +6,18 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
     case now
     case skills
     case storage
-    case cleanup
     case trending
 
     var id: String { rawValue }
 
-    static let defaults: [PanelBlock] = [.now, .skills, .storage, .cleanup]
+    /// Skill cleanup lives with the skills in Clove's window: it's a once-a-month
+    /// tidy, not something to reach for from the notch.
+    static let defaults: [PanelBlock] = [.now, .skills, .storage]
     /// Lists you scroll get the island's full height; the rest size to fit,
     /// so there's never empty island below them or content cut off.
     var fitsContent: Bool {
         switch self {
-        case .now, .storage, .cleanup: true
+        case .now, .storage: true
         case .skills, .trending: false
         }
     }
@@ -29,17 +30,15 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
         case .now: "Now"
         case .skills: "Skills"
         case .storage: "Storage"
-        case .cleanup: "Cleanup"
         case .trending: "Trending"
         }
     }
 
     var detail: String {
         switch self {
-        case .now: "Agents at work and servers up"
+        case .now: "Agents at work, servers up, and what's busy"
         case .skills: "Search, copy, and insert skills"
         case .storage: "The disk, live, and what to clear"
-        case .cleanup: "Context spent on unused skills"
         case .trending: "What's climbing on skills.sh"
         }
     }
@@ -49,7 +48,6 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
         case .now: "dot.radiowaves.left.and.right"
         case .skills: "square.stack.3d.up.fill"
         case .storage: "internaldrive.fill"
-        case .cleanup: "leaf.fill"
         case .trending: "chart.line.uptrend.xyaxis"
         }
     }
@@ -60,7 +58,6 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
         case .now: Palette.Vivid.violet
         case .skills: Palette.Vivid.blue
         case .storage: Palette.Vivid.orange
-        case .cleanup: Palette.Vivid.green
         case .trending: Palette.Vivid.pink
         }
     }
@@ -71,7 +68,6 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
         case .now: .running
         case .skills: .library(.all)
         case .storage: .storage
-        case .cleanup: .cleanup
         case .trending: .discover
         }
     }

@@ -109,8 +109,15 @@ final class NotchModel {
     /// it stays hidden inside the notch.
     var isLive: Bool { !isYielding && !agents.working.isEmpty }
 
-    /// Each ear holds one app icon, with room to breathe on both sides.
+    /// Each ear holds one app icon, with room to breathe on both sides, and
+    /// widens for a fanned stack when agents work in several apps.
     static let earWidth: CGFloat = 34
+    static let earIconSize: CGFloat = 18
+
+    var earWidth: CGFloat {
+        let apps = min(AgentIcons.distinct(agents.working).count, 3)
+        return max(Self.earWidth, AgentIconStack.width(count: apps, size: Self.earIconSize) + 16)
+    }
 
     /// The island's outer size for the current phase, shoulders included.
     var size: CGSize {
@@ -122,7 +129,7 @@ final class NotchModel {
             // it; it's only where the island grows from. The stand-in on
             // screens without a notch is the notch's own size, since it's all there is.
             if isLive {
-                body = CGSize(width: notch.width + Self.earWidth * 2, height: notch.height)
+                body = CGSize(width: notch.width + earWidth * 2, height: notch.height)
             } else if isHardware {
                 return CGSize(width: notch.width - 4, height: notch.height - 2)
             } else {
