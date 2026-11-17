@@ -256,6 +256,34 @@ enum WhatsNewCatalog {
             features: [],
             isNotchTutorial: true
         ),
+        WhatsNewRelease(
+            version: "3.4",
+            title: "What's New in Clove",
+            subtitle: "See what's using your Mac, and what's safe to delete.",
+            symbolName: "waveform.path.ecg",
+            features: [
+                FeatureHighlight(
+                    symbolName: "waveform.path.ecg",
+                    title: "Activity",
+                    detail: "What's running and what it costs, each app counted with its helpers. Quit or stop anything from the list, and see how warm your Mac is."
+                ),
+                FeatureHighlight(
+                    symbolName: "trash",
+                    title: "Safe to Delete",
+                    detail: "Storage lists Xcode build files, old device support, package downloads, and more, with what each is and what happens after. It all goes to the Trash first."
+                ),
+                FeatureHighlight(
+                    symbolName: "leaf",
+                    title: "Lighter",
+                    detail: "Clove reads processes straight from macOS and stops refreshing when its window is closed. Idle, it uses about a quarter of what it did."
+                ),
+                FeatureHighlight(
+                    symbolName: "rectangle.topthird.inset.filled",
+                    title: "A Smarter Notch",
+                    detail: "The app each agent runs in, fanned out. Click one to open its chat, and hear about a task once, when it's actually done."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
