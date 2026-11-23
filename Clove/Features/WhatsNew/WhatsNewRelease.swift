@@ -284,6 +284,34 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.5",
+            title: "What's New in Clove 3.5",
+            subtitle: "Every port named, your plan limits at a glance, and a Now tab laid out your way.",
+            symbolName: "network",
+            features: [
+                FeatureHighlight(
+                    symbolName: "network",
+                    title: "Every Port, Named",
+                    detail: ":7265 is Raycast, :5000 is AirPlay Receiver. Choose which ports show in Settings › Now, or hover one in the notch and click Hide."
+                ),
+                FeatureHighlight(
+                    symbolName: "gauge.with.dots.needle.67percent",
+                    title: "Claude and Codex Limits",
+                    detail: "How much of each plan's five-hour and weekly windows you've used, when each resets, and whether you're on pace. Off until you turn it on."
+                ),
+                FeatureHighlight(
+                    symbolName: "slider.horizontal.3",
+                    title: "Now, Your Way",
+                    detail: "Show, hide and reorder Now's sections in Settings › Now, or right-click any of them in the notch."
+                ),
+                FeatureHighlight(
+                    symbolName: "sparkles",
+                    title: "A Glassier Notch",
+                    detail: "Clearer glass, and an agent at work breathes a soft glow in the colours of the app it's running in."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
