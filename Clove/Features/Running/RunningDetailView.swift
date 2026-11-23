@@ -22,7 +22,10 @@ struct RunningDetailView: View {
 
                 SkillDetailSection(title: "Details") {
                     Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Metrics.spacingL, verticalSpacing: Metrics.spacingS) {
-                        if let startedBy = process.startedBy {
+                        if let owner = process.owner {
+                            row(owner.isSystem ? "Part of" : "Belongs to", owner.isSystem ? "macOS · \(owner.name)" : owner.name)
+                        }
+                        if let startedBy = process.startedBy, startedBy != process.owner?.name {
                             row("Started by", startedBy)
                         }
                         if let folder = process.folder {
@@ -49,7 +52,7 @@ struct RunningDetailView: View {
         .navigationTitle(process.name)
         .toolbar {
             ToolbarItemGroup {
-                if let url = process.localURL {
+                if let url = process.localURL, process.kind != .appPort {
                     Button("Open in Browser", systemImage: "safari") { openURL(url) }
                         .help("Open \(url.absoluteString)")
                 }
@@ -82,6 +85,7 @@ struct RunningDetailView: View {
         case .agent: "The agent session ends. Unsaved work in it is lost."
         case .mcpServer: "Its agent loses these tools until it restarts the server."
         case .devServer: "The server stops listening on \(process.ports.map { ":\($0)" }.joined(separator: ", "))."
+        case .appPort: "\(process.owner?.name ?? "Its app") may stop working properly until you restart it."
         }
     }
 

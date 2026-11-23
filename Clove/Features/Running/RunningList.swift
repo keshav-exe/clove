@@ -40,7 +40,7 @@ struct RunningList: View {
             case .loaded(let processes) where processes.isEmpty && model.containers.containers.isEmpty && running.activity.isEmpty:
                 CalmEmptyState(
                     title: "Nothing running",
-                    message: "Agent sessions, the MCP servers they start, and dev servers they leave behind show up here. Clove checks every few seconds."
+                    message: "Agent sessions, the MCP servers they start, dev servers, and the ports apps keep open show up here. Clove checks every few seconds."
                 ) {
                     RunningArt()
                 }

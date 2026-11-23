@@ -35,7 +35,9 @@ struct RunningRow: View {
 
     private var subtitle: String {
         var parts: [String] = []
-        if let folder = process.folder {
+        if let owner = process.owner, process.kind == .appPort {
+            parts.append(owner.isSystem ? "macOS · \(owner.name)" : owner.name)
+        } else if let folder = process.folder {
             parts.append(folder.lastPathComponent)
         }
         if let startedBy = process.startedBy, startedBy != process.name {

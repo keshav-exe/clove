@@ -340,8 +340,14 @@ final class NotchController {
 final class NotchHostingView<Content: View>: NSHostingView<Content> {
     var onRightClick: () -> Void = {}
 
+    /// A view with its own context menu (a port, a widget, a section) gets
+    /// that menu; anywhere else, Clove's menu.
     override func rightMouseDown(with event: NSEvent) {
-        onRightClick()
+        if menu(for: event) != nil {
+            super.rightMouseDown(with: event)
+        } else {
+            onRightClick()
+        }
     }
 
     /// The island takes the first click even while another app is active, so

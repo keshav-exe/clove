@@ -76,8 +76,8 @@ struct NotchView: View {
                         stops: [
                             .init(color: .black, location: 0),
                             .init(color: .black, location: band),
-                            .init(color: .black.opacity(0.72), location: min(1, band + 0.22)),
-                            .init(color: .black.opacity(0.58), location: 1),
+                            .init(color: .black.opacity(0.5), location: min(1, band + 0.16)),
+                            .init(color: .black.opacity(0.32), location: 1),
                         ],
                         startPoint: .top,
                         endPoint: .bottom

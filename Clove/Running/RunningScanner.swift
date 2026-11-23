@@ -22,7 +22,8 @@ enum RunningScanner {
             RunningProcess(
                 pid: item.pid, kind: item.kind, name: item.name, startedBy: item.startedBy,
                 command: item.command, startedAt: item.startedAt, memoryBytes: item.memoryBytes,
-                ports: item.ports, folder: ProcessMonitor.workingFolder(of: item.pid).map { URL(filePath: $0, directoryHint: .isDirectory) }
+                ports: item.ports, folder: ProcessMonitor.workingFolder(of: item.pid).map { URL(filePath: $0, directoryHint: .isDirectory) },
+                owner: item.owner
             )
         }
         return Scan(processes: processes, sample: sample)
@@ -55,13 +56,33 @@ enum RunningScanner {
         "uvicorn", "gunicorn", "rails", "puma", "vite", "next-server", "esbuild", "hugo", "astro",
     ]
 
+    /// Databases, proxies, and tunnels you run for development, often from
+    /// `brew services`: worth a row like any dev server.
+    static let devServices: Set<String> = [
+        "postgres", "redis-server", "mysqld", "mariadbd", "mongod", "memcached", "nginx", "caddy",
+        "httpd", "cloudflared", "ngrok", "minio", "meilisearch", "typesense-server", "ollama",
+    ]
+
+    /// What a port is for, where its program's name doesn't say.
+    static func serviceName(program: String, ports: [Int]) -> String? {
+        switch program {
+        case "ControlCenter" where ports.contains(5000) || ports.contains(7000): "AirPlay Receiver"
+        case "rapportd": "Continuity"
+        case "sharingd": "Sharing"
+        case "remoted": "Remote Access"
+        default: nil
+        }
+    }
+
     static func classify(table: ProcessTable, ports: [Int32: [Int]], known: [KnownServer]) -> [RunningProcess] {
         var results: [RunningProcess] = []
         var claimed: Set<Int32> = []
         let now = Date.now
 
-        func make(_ entry: ProcessTable.Entry, kind: RunningProcess.Kind, name: String) -> RunningProcess {
+        func make(_ entry: ProcessTable.Entry, kind: RunningProcess.Kind, name: String, owner: PortOwner? = nil) -> RunningProcess {
             let tree = table.subtree(of: entry.pid)
+            // An app's own sockets only: what it started may be listed on its own.
+            let listening = kind == .appPort ? (ports[entry.pid] ?? []) : Array(Set(tree.flatMap { ports[$0.pid] ?? [] })).sorted()
             return RunningProcess(
                 pid: entry.pid,
                 kind: kind,
@@ -70,8 +91,9 @@ enum RunningScanner {
                 command: SecretRedactor.redact(entry.args),
                 startedAt: now.addingTimeInterval(-entry.elapsed),
                 memoryBytes: tree.reduce(0) { $0 + $1.residentKB } * 1024,
-                ports: Array(Set(tree.flatMap { ports[$0.pid] ?? [] })).sorted(),
-                folder: nil
+                ports: listening,
+                folder: nil,
+                owner: owner
             )
         }
 
@@ -92,17 +114,79 @@ enum RunningScanner {
             for child in table.subtree(of: entry.pid) { claimed.insert(child.pid) }
         }
 
-        // Dev servers: dev runtimes listening on a port, or anything an agent started.
+        // Dev servers: dev runtimes and services listening on a port, or
+        // anything an agent started. A runtime an app ships for itself, like
+        // Raycast's Node, belongs to that app instead.
         for entry in sorted where ports[entry.pid] != nil && !claimed.contains(entry.pid) {
             let ancestors = table.ancestors(of: entry.pid)
             if ancestors.contains(where: { claimed.contains($0.pid) && agentName($0) == nil }) { continue }
             let startedByAgent = ancestors.contains { agentName($0) != nil }
-            let isAppHelper = entry.args.contains(".app/Contents/")
-            guard startedByAgent || (devRuntimes.contains(entry.program) && !isAppHelper) else { continue }
-            results.append(make(entry, kind: .devServer, name: entry.program))
+            let program = entry.program.lowercased()
+            let isDevProgram = devRuntimes.contains(program) || devServices.contains(program)
+            guard startedByAgent || (isDevProgram && !isBundled(entry)) else { continue }
+            results.append(make(entry, kind: .devServer, name: entry.program, owner: appOwner(entry, ancestors: ancestors)))
+            for child in table.subtree(of: entry.pid) { claimed.insert(child.pid) }
+        }
+
+        // App ports: what's left listening belongs to an app or to macOS.
+        for entry in sorted where ports[entry.pid] != nil && !claimed.contains(entry.pid) {
+            let ancestors = table.ancestors(of: entry.pid)
+            if ancestors.contains(where: { claimed.contains($0.pid) }) { continue }
+            guard let owner = portOwner(entry, ancestors: ancestors, ports: ports[entry.pid] ?? []) else { continue }
+            results.append(make(entry, kind: .appPort, name: entry.program, owner: owner))
             for child in table.subtree(of: entry.pid) { claimed.insert(child.pid) }
         }
         return results
+    }
+
+    // MARK: - Owners
+
+    static let systemPrefixes = ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/", "/usr/bin/"]
+
+    /// "/Applications/Raycast.app/Contents/MacOS/Raycast" → "/Applications/Raycast.app".
+    /// A framework's stub app, like Python.framework's Python.app, isn't an app.
+    static func bundlePath(of path: String) -> String? {
+        guard let range = path.range(of: ".app/") else { return nil }
+        let bundle = String(path[..<range.lowerBound]) + ".app"
+        return bundle.contains(".framework/") ? nil : bundle
+    }
+
+    /// A program an app installed for its own use: inside its bundle or its
+    /// Application Support folder.
+    static func isBundled(_ entry: ProcessTable.Entry) -> Bool {
+        let path = entry.executable ?? entry.args
+        return bundlePath(of: path) != nil || path.contains("/Library/Application Support/")
+    }
+
+    /// The app that started a process, stopping at a shell: `npm run dev` in
+    /// Cursor's terminal is yours, not Cursor's.
+    static func appOwner(_ entry: ProcessTable.Entry, ancestors: [ProcessTable.Entry]) -> PortOwner? {
+        for item in [entry] + ancestors {
+            if ActivityReport.shells.contains(item.program) { return nil }
+            let path = item.executable ?? item.args
+            if let bundle = bundlePath(of: path) {
+                return PortOwner(name: appName(bundle), bundlePath: bundle, isSystem: systemPrefixes.contains(where: path.hasPrefix))
+            }
+        }
+        return nil
+    }
+
+    /// Who a leftover listener belongs to: an app, a part of macOS, or no one
+    /// Clove can name, which stays out of the list.
+    static func portOwner(_ entry: ProcessTable.Entry, ancestors: [ProcessTable.Entry], ports: [Int]) -> PortOwner? {
+        let path = entry.executable ?? entry.args
+        let isSystem = systemPrefixes.contains(where: path.hasPrefix)
+        if let service = serviceName(program: entry.program, ports: ports) {
+            return PortOwner(name: service, bundlePath: bundlePath(of: path), isSystem: isSystem)
+        }
+        if let owner = appOwner(entry, ancestors: ancestors) { return owner }
+        return isSystem ? PortOwner(name: entry.program, bundlePath: nil, isSystem: true) : nil
+    }
+
+    /// The name Finder shows, without ".app".
+    static func appName(_ bundle: String) -> String {
+        let shown = FileManager.default.displayName(atPath: bundle)
+        return shown.hasSuffix(".app") ? String(shown.dropLast(4)) : shown
     }
 
     static func agentName(_ entry: ProcessTable.Entry) -> String? {

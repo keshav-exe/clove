@@ -25,7 +25,7 @@ struct PrivacyPromise: Identifiable, Hashable {
         PrivacyPromise(
             symbolName: "wifi.slash",
             title: "No analytics",
-            detail: "Discover talks to skills.sh and GitHub only while you browse or install. No telemetry, no skill uploads."
+            detail: "Discover talks to skills.sh and GitHub only while you browse or install. Plan limits, once you turn them on, ask Anthropic and OpenAI. No telemetry, no skill uploads."
         ),
     ]
 }

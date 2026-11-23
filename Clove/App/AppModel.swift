@@ -69,6 +69,7 @@ final class AppModel {
     let running = RunningStore()
     let containers = ContainerStore()
     let worktrees = WorktreeStore()
+    let limits = UsageLimitsStore()
     private let scanner: SkillScanner
     private let persistence: TagPersistence
 

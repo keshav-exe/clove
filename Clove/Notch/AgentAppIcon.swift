@@ -65,6 +65,9 @@ enum AgentIcons {
         return sessions.filter { seen.insert($0.host?.bundlePath ?? "agent:\($0.agent.rawValue)").inserted }
     }
 
+    /// The agent maker's own app icon, for places without a session.
+    static func icon(for agent: AgentSession.Agent) -> NSImage { fallback(for: agent) }
+
     /// Before the host is known: the agent maker's own app if it's installed,
     /// else Terminal, where CLI agents live.
     private static func fallback(for agent: AgentSession.Agent) -> NSImage {

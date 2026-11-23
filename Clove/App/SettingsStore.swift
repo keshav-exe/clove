@@ -92,6 +92,47 @@ final class SettingsStore {
         didSet { defaults.set(notchStorageMoments, forKey: Keys.notchStorageMoments) }
     }
 
+    /// The Now board's sections, in order. Leaving one out hides it.
+    var nowSections: [NowSection] {
+        didSet { defaults.set(nowSections.map(\.rawValue), forKey: Keys.nowSections) }
+    }
+
+    /// Which listening ports the Now board lists.
+    var nowShowsDevServers: Bool {
+        didSet { defaults.set(nowShowsDevServers, forKey: Keys.nowShowsDevServers) }
+    }
+
+    /// Ports apps keep open for themselves, like Raycast's on :7265.
+    var nowShowsAppPorts: Bool {
+        didSet { defaults.set(nowShowsAppPorts, forKey: Keys.nowShowsAppPorts) }
+    }
+
+    /// Ports macOS keeps open, like AirPlay Receiver on :5000 and :7000.
+    var nowShowsSystemPorts: Bool {
+        didSet { defaults.set(nowShowsSystemPorts, forKey: Keys.nowShowsSystemPorts) }
+    }
+
+    /// Apps whose ports you hid from the Now board, by `PortOwner.key`.
+    var hiddenPortOwners: [String] {
+        didSet { defaults.set(hiddenPortOwners, forKey: Keys.hiddenPortOwners) }
+    }
+
+    /// Claude and Codex plan limits in the Now board. Off until asked for,
+    /// since it reads each agent's sign-in and asks its servers.
+    var showsUsageLimits: Bool {
+        didSet { defaults.set(showsUsageLimits, forKey: Keys.showsUsageLimits) }
+    }
+
+    /// The limits invitation was answered, either way.
+    var dismissedUsageLimitsOffer: Bool {
+        didSet { defaults.set(dismissedUsageLimitsOffer, forKey: Keys.dismissedUsageLimitsOffer) }
+    }
+
+    /// ...when a Claude or Codex limit is nearly used up.
+    var notchLimitMoments: Bool {
+        didSet { defaults.set(notchLimitMoments, forKey: Keys.notchLimitMoments) }
+    }
+
     /// The blocks in the menu bar panel, in the order their tiles sit.
     var panelBlocks: [PanelBlock] {
         didSet { defaults.set(panelBlocks.map(\.rawValue), forKey: Keys.panelBlocks) }
@@ -113,8 +154,6 @@ final class SettingsStore {
     }
 
     /// Update the user dismissed until a newer version ships.
-
-
 
     /// Agents a skill from skills.sh is linked into when installed.
     var installTargets: Set<AgentTarget> {
@@ -158,6 +197,14 @@ final class SettingsStore {
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
         notchServerMoments = defaults.flag(Keys.notchServerMoments, default: true)
         notchStorageMoments = defaults.flag(Keys.notchStorageMoments, default: true)
+        nowShowsDevServers = defaults.flag(Keys.nowShowsDevServers, default: true)
+        nowSections = defaults.stringArray(forKey: Keys.nowSections).map { $0.compactMap(NowSection.init(rawValue:)) } ?? NowSection.defaults
+        nowShowsAppPorts = defaults.flag(Keys.nowShowsAppPorts, default: true)
+        nowShowsSystemPorts = defaults.flag(Keys.nowShowsSystemPorts, default: false)
+        hiddenPortOwners = defaults.stringArray(forKey: Keys.hiddenPortOwners) ?? []
+        showsUsageLimits = defaults.flag(Keys.showsUsageLimits, default: false)
+        dismissedUsageLimitsOffer = defaults.flag(Keys.dismissedUsageLimitsOffer, default: false)
+        notchLimitMoments = defaults.flag(Keys.notchLimitMoments, default: true)
         lastSeenWhatsNewVersion = defaults.string(forKey: Keys.lastSeenWhatsNewVersion)
         hotKey = Self.loadHotKey(from: defaults)
         installTargets = Self.loadInstallTargets(from: defaults)
@@ -171,11 +218,25 @@ final class SettingsStore {
         )
     }
 
-
     func addProjectRoot(_ url: URL) {
         let path = url.path(percentEncoded: false)
         guard !customProjectRoots.contains(path) else { return }
         customProjectRoots.append(path)
+    }
+
+    /// Whether the Now board lists a port, by your choices in Settings.
+    func showsInNow(_ process: RunningProcess) -> Bool {
+        if let owner = process.owner, hiddenPortOwners.contains(owner.key) { return false }
+        switch process.kind {
+        case .devServer: return nowShowsDevServers
+        case .appPort: return process.owner?.isSystem == true ? nowShowsSystemPorts : nowShowsAppPorts
+        case .agent, .mcpServer: return false
+        }
+    }
+
+    func hidePorts(of owner: PortOwner) {
+        guard !hiddenPortOwners.contains(owner.key) else { return }
+        hiddenPortOwners.append(owner.key)
     }
 
     func removeProjectRoot(_ path: String) {
@@ -237,6 +298,14 @@ final class SettingsStore {
         static let notchStorageMoments = "notchStorageMoments"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"
         static let installTargets = "installTargets"
+        static let nowShowsDevServers = "nowShowsDevServers"
+        static let nowSections = "nowSections"
+        static let nowShowsAppPorts = "nowShowsAppPorts"
+        static let nowShowsSystemPorts = "nowShowsSystemPorts"
+        static let hiddenPortOwners = "hiddenPortOwners"
+        static let showsUsageLimits = "showsUsageLimits"
+        static let dismissedUsageLimitsOffer = "dismissedUsageLimitsOffer"
+        static let notchLimitMoments = "notchLimitMoments"
     }
 }
 

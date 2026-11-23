@@ -18,6 +18,10 @@ final class NotchLiveMonitor {
         notch.agents.onFinished = { [weak self] sessions in
             self?.agentsFinished(sessions)
         }
+        model.limits.onNearlyUsed = { [weak self] agent, window in
+            self?.limitNearlyUsed(agent, window)
+        }
+
     }
 
     func start() {
@@ -26,6 +30,7 @@ final class NotchLiveMonitor {
         tasks = [
             Task { [weak self] in await self?.watchServers() },
             Task { [weak self] in await self?.watchDisk() },
+            Task { [weak self] in await self?.watchLimits() },
         ]
     }
 
@@ -121,6 +126,26 @@ final class NotchLiveMonitor {
                 title: "localhost:\(port) stopped",
                 detail: [server.name, server.folder?.lastPathComponent].compactMap(\.self).joined(separator: " · ")
             ))
+        }
+    }
+
+    // MARK: - Limits
+
+    private func limitNearlyUsed(_ agent: AgentSession.Agent, _ window: UsageWindow) {
+        guard model.settings.notchLimitMoments, model.settings.showsUsageLimits else { return }
+        let reset = window.resetsAt.map { " · resets " + $0.formatted(.relative(presentation: .named)) } ?? ""
+        notch.present(NotchMoment(
+            symbol: "gauge.with.dots.needle.100percent",
+            tone: .warning,
+            title: "\(agent.title) \(window.title.lowercased()) limit at \(Int(window.usedPercent.rounded()))%",
+            detail: "Pace yourself\(reset)",
+            duration: .seconds(7)
+        ))
+    }
+
+    private func watchLimits() async {
+        await model.limits.watch { [weak self] in
+            self?.model.settings.showsUsageLimits == true
         }
     }
 

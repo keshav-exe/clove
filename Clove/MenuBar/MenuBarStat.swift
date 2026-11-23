@@ -42,7 +42,7 @@ enum MenuBarStat: String, CaseIterable, Identifiable, Sendable {
             return (free, "\(free) free")
         case .devServers, .servers:
             let kinds = await RunningScanner.kinds(known: known)
-            let count = kinds.filter { self == .devServers ? $0 == .devServer : $0 != .agent }.count
+            let count = kinds.filter { self == .devServers ? $0 == .devServer : ($0 == .devServer || $0 == .mcpServer) }.count
             let noun = self == .devServers ? "dev server" : "server"
             // Zero shows the icon alone, the way badges disappear at zero.
             return count == 0 ? ("", "no \(noun)s running") : ("\(count)", "\(count) \(noun)\(count == 1 ? "" : "s") running")
