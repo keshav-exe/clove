@@ -68,7 +68,10 @@ final class NotchController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reposition() }
+            MainActor.assumeIsolated {
+                self?.reposition()
+                self?.updateActiveTimer()
+            }
         }
         installMouseMonitors()
         followActiveDisplay()
@@ -141,6 +144,7 @@ final class NotchController {
     /// you haven't met yet.
     func setVisible(_ visible: Bool) {
         isVisible = visible
+        updateActiveTimer()
         if visible {
             WindowBridge.shared.panelWindow = window
             reposition()
@@ -178,9 +182,22 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.moveToActiveDisplay() }
             },
         ]
-        // Other apps' windows moving between displays don't notify; look now and then.
-        activeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+    }
+
+    /// Other apps' windows moving between displays don't notify, so following
+    /// the active display means looking now and then. Only then: with the
+    /// island on one display, Clove sleeps instead of waking every 1.5s.
+    private func updateActiveTimer() {
+        let needed = isVisible && model.settings.islandPlacement == .active && NSScreen.screens.count > 1
+        if needed, activeTimer == nil {
+            let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+            }
+            timer.tolerance = 0.5
+            activeTimer = timer
+        } else if !needed {
+            activeTimer?.invalidate()
+            activeTimer = nil
         }
     }
 
