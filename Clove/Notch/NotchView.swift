@@ -21,12 +21,18 @@ struct NotchView: View {
     var body: some View {
         let size = notch.size
 
+        let hidden = notch.isHiddenAtRest
         island
             .frame(width: size.width, height: size.height, alignment: .top)
+            // A floating island at rest has nothing to show: it waits out of sight.
+            .opacity(hidden ? 0 : 1)
+            .scaleEffect(hidden ? 0.82 : 1, anchor: .top)
+            .padding(.top, notch.geometry?.topInset ?? 0)
             .frame(width: NotchGeometry.canvas.width, height: NotchGeometry.canvas.height, alignment: .top)
             .animation(motion, value: notch.phase)
             .animation(motion, value: size)
-            .preferredColorScheme(notch.isHardware ? .dark : nil)
+            .animation(motion, value: hidden)
+            .preferredColorScheme(.dark)
     }
 
     /// The island is a physical thing, so it moves on springs, which also
@@ -43,7 +49,7 @@ struct NotchView: View {
     }
 
     private var shape: NotchShape {
-        NotchShape(topRadius: notch.shoulderRadius, bottomRadius: notch.bottomRadius)
+        NotchShape(topRadius: notch.shoulderRadius, bottomRadius: notch.bottomRadius, isFloating: notch.isFloating)
     }
 
     @ViewBuilder
@@ -65,9 +71,10 @@ struct NotchView: View {
     @ViewBuilder
     private var background: some View {
         let expanded = notch.isExpanded
-        if notch.isHardware {
+        if notch.isHardware || notch.isFloating {
             let glass = model.settings.notchGlass
-            let band = min(0.9, notch.notchSize.height / max(notch.size.height, 1))
+            // The floating island meets no camera, so it needn't start solid.
+            let band = notch.isFloating ? 0 : min(0.9, notch.notchSize.height / max(notch.size.height, 1))
             ZStack {
                 IslandShadow(shape: shape, opacity: expanded ? (glass ? 0.32 : 0.4) : 0, radius: 22, y: 10)
                 if glass {
@@ -75,8 +82,8 @@ struct NotchView: View {
                         .glassEffect(.regular, in: shape)
                     shape.fill(LinearGradient(
                         stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: band),
+                            .init(color: .black.opacity(notch.isFloating ? 0.62 : 1), location: 0),
+                            .init(color: .black.opacity(notch.isFloating ? 0.62 : 1), location: band),
                             .init(color: .black.opacity(0.5), location: min(1, band + 0.16)),
                             .init(color: .black.opacity(0.32), location: 1),
                         ],
@@ -119,7 +126,8 @@ struct NotchView: View {
             }
         case .open:
             VStack(spacing: 0) {
-                PanelTabStrip(gap: notch.notchSize.width)
+                // Beside the notch, the tabs step around the camera; the floating island has none.
+                PanelTabStrip(gap: notch.isFloating ? 0 : notch.notchSize.width)
                     .frame(height: notch.notchSize.height)
                 if model.isPanelVisible {
                     let tab = notch.tab
@@ -206,8 +214,21 @@ private struct LiveEars: View {
             }
             .frame(width: notch.earWidth)
 
-            Color.clear
-                .frame(width: notch.notchSize.width)
+            Group {
+                if notch.isFloating {
+                    // No camera here: say what's being worked on.
+                    Text(LiveEarsLabel.text(working))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .contentTransition(.opacity)
+                        .transition(reduceMotion ? .identity : .earContent)
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: notch.isFloating ? NotchModel.islandLabelWidth : notch.notchSize.width)
 
             ZStack {
                 if working.count > 1 {
@@ -229,6 +250,17 @@ private struct LiveEars: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(working.isEmpty ? "Clove" : "Clove, \(working.count) agent\(working.count == 1 ? "" : "s") working")
         .accessibilityAddTraits(.isButton)
+    }
+
+}
+
+/// What the floating island says between its ears.
+enum LiveEarsLabel {
+    /// "Fix the hero", or "3 agents working".
+    static func text(_ working: [AgentSession]) -> String {
+        if working.count > 1 { return "\(working.count) agents working" }
+        guard let session = working.first else { return "" }
+        return session.title ?? session.project
     }
 }
 

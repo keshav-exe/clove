@@ -15,7 +15,7 @@ enum AccessMode: String, CaseIterable, Identifiable, Sendable {
     @MainActor
     var title: String {
         switch self {
-        case .notch: NotchGeometry.hasHardwareNotch ? "Notch" : "Top of the Screen"
+        case .notch: NotchGeometry.hasHardwareNotch ? "Notch" : "Dynamic Island"
         case .menuBar: "Menu Bar"
         }
     }

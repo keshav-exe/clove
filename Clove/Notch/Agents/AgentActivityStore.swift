@@ -83,6 +83,11 @@ final class AgentActivityStore {
         }
     }
 
+    #if DEBUG
+    /// For previews and tests.
+    func showPreview(_ sessions: [AgentSession]) { self.sessions = sessions }
+    #endif
+
     var working: [AgentSession] {
         sessions.filter { $0.state == .working }
     }

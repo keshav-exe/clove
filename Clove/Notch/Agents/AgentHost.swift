@@ -29,9 +29,16 @@ enum AgentHostFinder {
         conversationID: String? = nil
     ) -> AgentHost? {
         let word = agent == .claude ? "claude" : "codex"
+        let own = getpid()
         let named = sample.table.entries.values
-            .filter { $0.args.lowercased().contains(word) && !ActivityReport.shells.contains($0.program) }
-        let exact = conversationID.map { id in named.filter { $0.args.contains(id) } } ?? []
+            .filter { $0.pid != own && $0.args.lowercased().contains(word) && !ActivityReport.shells.contains($0.program) }
+        // Only a flag that resumes this very conversation counts: a path that
+        // happens to mention the ID doesn't.
+        let exact = conversationID.map { id in
+            named.filter { entry in
+                ["--resume \(id)", "--resume=\(id)", "--session-id \(id)", "--session-id=\(id)", "resume \(id)"].contains { entry.args.contains($0) }
+            }
+        } ?? []
         let candidates = (exact.isEmpty ? named.filter { workingFolder($0.pid) == folder } : exact)
             .sorted { $0.elapsed < $1.elapsed }
 

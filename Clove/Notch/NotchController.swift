@@ -22,6 +22,8 @@ final class NotchController {
     private var keyRouter: PanelKeyRouter?
     private var monitors: [Any] = []
     private var screenObserver: (any NSObjectProtocol)?
+    private var activeObservers: [any NSObjectProtocol] = []
+    private var activeTimer: Timer?
 
     private var hoverTask: Task<Void, Never>?
     private var collapseTask: Task<Void, Never>?
@@ -69,6 +71,7 @@ final class NotchController {
             MainActor.assumeIsolated { self?.reposition() }
         }
         installMouseMonitors()
+        followActiveDisplay()
         listenForPartners()
         observeOpenState()
     }
@@ -155,10 +158,36 @@ final class NotchController {
     }
 
     private func reposition() {
-        guard let geometry = NotchGeometry.current() else { return }
+        guard let geometry = NotchGeometry.current(placement: model.settings.islandPlacement) else { return }
+        guard geometry != notch.geometry else { return }
         notch.geometry = geometry
         window.setFrame(geometry.windowFrame, display: true)
-        window.appearance = geometry.isHardware ? NSAppearance(named: .darkAqua) : nil
+        window.appearance = NSAppearance(named: .darkAqua)
+    }
+
+    /// With the island on the display you're using, it moves when you switch
+    /// apps or windows to another one. Only while it's closed: an open island
+    /// never jumps out from under the pointer.
+    private func followActiveDisplay() {
+        let workspace = NSWorkspace.shared.notificationCenter
+        activeObservers = [
+            workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+            },
+            NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+            },
+        ]
+        // Other apps' windows moving between displays don't notify; look now and then.
+        activeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+        }
+    }
+
+    private func moveToActiveDisplay() {
+        guard isVisible, model.settings.islandPlacement == .active,
+              notch.phase == .collapsed, notch.moment == nil else { return }
+        reposition()
     }
 
     func toggle() {

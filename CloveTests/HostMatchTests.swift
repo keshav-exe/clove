@@ -17,6 +17,8 @@ struct HostMatchTests {
             Self.entry(901, 900, "/opt/homebrew/bin/claude", "claude --resume \(id) --output-format stream-json", elapsed: 120),
             Self.entry(700, 1, "/Applications/Claude.app/Contents/MacOS/Claude"),
             Self.entry(701, 700, "/Users/me/Library/Application Support/Claude/claude-code/claude.app/Contents/MacOS/claude", "claude --output-format stream-json", elapsed: 5),
+            // A tool whose path happens to hold the ID and the word "claude".
+            Self.entry(600, 1, "/tmp/claude-501/\(id)/Build/Tool.app/Contents/MacOS/Tool", elapsed: 1),
         ]), ports: [:], cpuTime: [:], takenAt: 0)
     }
 

@@ -7,6 +7,8 @@ import SwiftUI
 struct NotchShape: Shape {
     var topRadius: CGFloat
     var bottomRadius: CGFloat
+    /// The floating island: a rounded rectangle, no shoulders.
+    var isFloating = false
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(topRadius, bottomRadius) }
@@ -17,6 +19,9 @@ struct NotchShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
+        if isFloating {
+            return RoundedRectangle(cornerRadius: min(bottomRadius, rect.height / 2, rect.width / 2), style: .continuous).path(in: rect)
+        }
         let top = min(topRadius, rect.width / 4)
         let bottom = min(bottomRadius, (rect.width - top * 2) / 2, rect.height - top)
         var path = Path()

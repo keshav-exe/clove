@@ -82,6 +82,16 @@ final class SettingsStore {
         didSet { defaults.set(notchAgentMoments, forKey: Keys.notchAgentMoments) }
     }
 
+    /// Agents at work show beside the notch, or in the floating island.
+    var notchShowsAgents: Bool {
+        didSet { defaults.set(notchShowsAgents, forKey: Keys.notchShowsAgents) }
+    }
+
+    /// Which display the island lives on.
+    var islandPlacement: NotchGeometry.Placement {
+        didSet { defaults.set(islandPlacement.rawValue, forKey: Keys.islandPlacement) }
+    }
+
     /// ...when an agent starts a task you sent it.
     var notchAgentStartMoments: Bool {
         didSet { defaults.set(notchAgentStartMoments, forKey: Keys.notchAgentStartMoments) }
@@ -201,6 +211,8 @@ final class SettingsStore {
         notchGlass = defaults.flag(Keys.notchGlass, default: true)
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
         notchAgentStartMoments = defaults.flag(Keys.notchAgentStartMoments, default: true)
+        notchShowsAgents = defaults.flag(Keys.notchShowsAgents, default: true)
+        islandPlacement = defaults.string(forKey: Keys.islandPlacement).flatMap(NotchGeometry.Placement.init(rawValue:)) ?? .builtIn
         notchServerMoments = defaults.flag(Keys.notchServerMoments, default: true)
         notchStorageMoments = defaults.flag(Keys.notchStorageMoments, default: true)
         nowShowsDevServers = defaults.flag(Keys.nowShowsDevServers, default: true)
@@ -301,6 +313,8 @@ final class SettingsStore {
         static let notchGlass = "notchGlass"
         static let notchAgentMoments = "notchAgentMoments"
         static let notchAgentStartMoments = "notchAgentStartMoments"
+        static let notchShowsAgents = "notchShowsAgents"
+        static let islandPlacement = "islandPlacement"
         static let notchServerMoments = "notchServerMoments"
         static let notchStorageMoments = "notchStorageMoments"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"

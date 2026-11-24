@@ -5,6 +5,11 @@ struct GeneralSettingsPane: View {
     @State private var launchAtLogin = LaunchAtLogin()
     @State private var rivals: [NotchNeighbor] = []
 
+    /// Where the island goes matters only with another display, or no notch at all.
+    private var showsPlacement: Bool {
+        NSScreen.screens.count > 1 || !NotchGeometry.hasHardwareNotch
+    }
+
     var body: some View {
         @Bindable var settings = model.settings
         @Bindable var launch = launchAtLogin
@@ -31,13 +36,27 @@ struct GeneralSettingsPane: View {
                 Text("Where Clove Lives")
             } footer: {
                 Text(isNotch
-                    ? "Hover the notch to peek; click it or press the shortcut to search. Right-click it for every section. Macs without a notch get one at the top of the screen."
+                    ? "Hover the notch to peek; click it or press the shortcut to search. Right-click it for every section. On a display without a notch, Clove is a Dynamic Island in the menu bar: out of sight until something's live, and a hover away."
                     : "Click the icon or press the shortcut for the panel; right-click it for every section. Moments and agents at work need the notch.")
                     .settingsFooter()
             }
 
             if isNotch {
                 Section("Notch") {
+                    if showsPlacement {
+                        Picker(selection: $settings.islandPlacement) {
+                            ForEach(NotchGeometry.Placement.allCases) { placement in
+                                Text(placement.title).tag(placement)
+                            }
+                        } label: {
+                            SettingsLabel(
+                                title: "Show on",
+                                subtitle: "Displays without a notch get a Dynamic Island in the menu bar",
+                                symbol: "display.2", tint: Palette.Vivid.blue
+                            )
+                        }
+                    }
+                    SettingsToggle(title: "Agents at work beside the notch", subtitle: "Their app's icon and a dot, or a floating pill saying what they're on", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchShowsAgents)
                     SettingsToggle(title: "Open on hover", subtitle: "Peek without clicking; it closes when you move away", symbol: "cursorarrow.rays", tint: Palette.Vivid.blue, isOn: $settings.notchOpensOnHover)
                     SettingsToggle(title: "Liquid Glass when open", subtitle: "Glass below the notch instead of solid black", symbol: "circle.lefthalf.filled", tint: Palette.Vivid.cyan, isOn: $settings.notchGlass)
                     SettingsToggle(title: "Stay open when clicking elsewhere", symbol: "pin.fill", tint: Palette.Vivid.orange, isOn: $settings.keepPanelOnTop)

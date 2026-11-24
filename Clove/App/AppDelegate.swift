@@ -270,6 +270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = settings.hasCompletedOnboarding
             _ = settings.accessMode
             _ = settings.menuBarStat
+            _ = settings.islandPlacement
             _ = settings.showsUsageLimits
         } onChange: { [weak self] in
             Task { @MainActor in
