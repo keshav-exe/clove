@@ -148,7 +148,7 @@ final class NotchLiveMonitor {
 
     // MARK: - Limits
 
-    private func limitNearlyUsed(_ agent: AgentSession.Agent, _ window: UsageWindow) {
+    private func limitNearlyUsed(_ agent: LimitsAgent, _ window: UsageWindow) {
         guard model.settings.notchLimitMoments, model.settings.showsUsageLimits else { return }
         let reset = window.resetsAt.map { " · resets " + $0.formatted(.relative(presentation: .named)) } ?? ""
         notch.present(NotchMoment(

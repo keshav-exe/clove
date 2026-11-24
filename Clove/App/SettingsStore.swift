@@ -87,6 +87,11 @@ final class SettingsStore {
         didSet { defaults.set(notchShowsAgents, forKey: Keys.notchShowsAgents) }
     }
 
+    /// The mark in the notch's right ear while one agent works.
+    var agentMark: AgentMark {
+        didSet { defaults.set(agentMark.rawValue, forKey: Keys.agentMark) }
+    }
+
     /// Which display the island lives on.
     var islandPlacement: NotchGeometry.Placement {
         didSet { defaults.set(islandPlacement.rawValue, forKey: Keys.islandPlacement) }
@@ -132,7 +137,7 @@ final class SettingsStore {
         didSet { defaults.set(hiddenPortOwners, forKey: Keys.hiddenPortOwners) }
     }
 
-    /// Claude and Codex plan limits in the Now board. Off until asked for,
+    /// Claude, Codex and Cursor plan limits in the Now board. Off until asked for,
     /// since it reads each agent's sign-in and asks its servers.
     var showsUsageLimits: Bool {
         didSet { defaults.set(showsUsageLimits, forKey: Keys.showsUsageLimits) }
@@ -212,6 +217,7 @@ final class SettingsStore {
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
         notchAgentStartMoments = defaults.flag(Keys.notchAgentStartMoments, default: true)
         notchShowsAgents = defaults.flag(Keys.notchShowsAgents, default: true)
+        agentMark = defaults.string(forKey: Keys.agentMark).flatMap(AgentMark.init(rawValue:)) ?? .dot
         islandPlacement = defaults.string(forKey: Keys.islandPlacement).flatMap(NotchGeometry.Placement.init(rawValue:)) ?? .builtIn
         notchServerMoments = defaults.flag(Keys.notchServerMoments, default: true)
         notchStorageMoments = defaults.flag(Keys.notchStorageMoments, default: true)
@@ -314,6 +320,7 @@ final class SettingsStore {
         static let notchAgentMoments = "notchAgentMoments"
         static let notchAgentStartMoments = "notchAgentStartMoments"
         static let notchShowsAgents = "notchShowsAgents"
+        static let agentMark = "agentMark"
         static let islandPlacement = "islandPlacement"
         static let notchServerMoments = "notchServerMoments"
         static let notchStorageMoments = "notchStorageMoments"

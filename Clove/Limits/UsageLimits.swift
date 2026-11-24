@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SQLite3
 
 /// One rolling limit on a plan: Claude's five hours, Codex's week.
 struct UsageWindow: Identifiable, Hashable, Sendable {
@@ -23,7 +25,7 @@ struct UsageWindow: Identifiable, Hashable, Sendable {
 
 /// What one agent's plan has left.
 struct AgentLimits: Hashable, Sendable {
-    let agent: AgentSession.Agent
+    let agent: LimitsAgent
     /// "Max", "Pro", "Plus", when the service says.
     let plan: String?
     let windows: [UsageWindow]
@@ -288,4 +290,206 @@ private func number(_ value: Any?) -> Double? {
 
 private func clamp(_ percent: Double) -> Double {
     min(max(percent, 0), 100)
+}
+
+// MARK: - Agents with plans
+
+/// The agents whose plan limits Clove can read. Not the same list as the
+/// agents it watches at work: Cursor has a plan, but no transcript to follow.
+enum LimitsAgent: String, CaseIterable, Sendable {
+    case claude
+    case codex
+    case cursor
+
+    var title: String {
+        switch self {
+        case .claude: "Claude"
+        case .codex: "Codex"
+        case .cursor: "Cursor"
+        }
+    }
+
+    /// The agent's own app icon.
+    @MainActor
+    var icon: NSImage {
+        switch self {
+        case .claude: AgentIcons.icon(for: .claude)
+        case .codex: AgentIcons.icon(for: .codex)
+        case .cursor: AppIconLookup.icon(bundleID: CursorLimitsClient.bundleID) ?? AgentIcons.icon(for: .claude)
+        }
+    }
+}
+
+@MainActor
+private enum AppIconLookup {
+    private static var cache: [String: NSImage] = [:]
+
+    static func icon(bundleID: String) -> NSImage? {
+        if let cached = cache[bundleID] { return cached }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
+        cache[bundleID] = icon
+        return icon
+    }
+}
+
+// MARK: - Cursor
+
+/// Cursor's plan usage, from the summary its own dashboard reads, signed in
+/// with the token Cursor keeps in its settings database. Read-only: Clove
+/// never refreshes the token, so Cursor stays signed in.
+enum CursorLimitsClient {
+    static let bundleID = "com.todesktop.230313mzl4w4u92"
+
+    static var database: URL {
+        URL.homeDirectory.appending(path: "Library/Application Support/Cursor/User/globalStorage/state.vscdb")
+    }
+
+    static var isInstalled: Bool {
+        FileManager.default.fileExists(atPath: database.path(percentEncoded: false))
+    }
+
+    struct Credentials: Sendable {
+        let accessToken: String
+        let userID: String
+        let plan: String?
+        let expiresAt: Date?
+
+        /// The dashboard's session cookie: the user, two colons, the token.
+        var cookie: String { "WorkosCursorSessionToken=\(userID)%3A%3A\(accessToken)" }
+    }
+
+    /// Nil when there's no sign-in Clove can read: signed out, or a newer
+    /// Cursor that keeps it encrypted. Clove won't reach into the Keychain
+    /// for Cursor's key, so then Cursor simply isn't listed.
+    @concurrent
+    static func credentials() async -> Credentials? {
+        guard let token = SettingsDatabase.value(for: "cursorAuth/accessToken", in: database), !token.isEmpty,
+              let claims = jwtClaims(token), let subject = claims["sub"] as? String,
+              let userID = subject.split(separator: "|").last.map(String.init), !userID.isEmpty
+        else { return nil }
+        let plan = SettingsDatabase.value(for: "cursorAuth/stripeMembershipType", in: database).map(planName)
+        let expires = (claims["exp"] as? Double).map { Date(timeIntervalSince1970: $0) }
+        return Credentials(accessToken: token, userID: userID, plan: plan, expiresAt: expires)
+    }
+
+    @concurrent
+    static func fetch(_ credentials: Credentials) async -> Result<AgentLimits, LimitsFailure> {
+        if let expires = credentials.expiresAt, expires < .now { return .failure(.expired) }
+        var request = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!, timeoutInterval: 15)
+        request.setValue(credentials.cookie, forHTTPHeaderField: "Cookie")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Clove", forHTTPHeaderField: "User-Agent")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if code == 401 || code == 403 { return .failure(.expired) }
+            guard code == 200 else { return .failure(.unavailable("Cursor didn't answer (\(code)). Clove tries again shortly.")) }
+            return parseSummary(data, plan: credentials.plan)
+        } catch {
+            return .failure(.unavailable("Couldn't reach Cursor. Clove tries again shortly."))
+        }
+    }
+
+    /// `{"billingCycleStart": "…", "billingCycleEnd": "…", "membershipType": "pro",
+    /// "individualUsage": {"plan": {"totalPercentUsed": 42, "apiPercentUsed": 60, …}}}`.
+    /// Team seats may only carry `individualUsage.overall`, or the percent in
+    /// a display message.
+    static func parseSummary(_ data: Data, plan fallbackPlan: String? = nil, now: Date = .now) -> Result<AgentLimits, LimitsFailure> {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .failure(.unavailable("Cursor sent something Clove couldn't read."))
+        }
+        let start = (root["billingCycleStart"] as? String).flatMap(ClaudeLimitsClient.date)
+        let end = (root["billingCycleEnd"] as? String).flatMap(ClaudeLimitsClient.date)
+        let length: TimeInterval? = if let start, let end { end.timeIntervalSince(start) } else { nil }
+        let plan = (root["membershipType"] as? String).map(planName) ?? fallbackPlan
+        let individual = root["individualUsage"] as? [String: Any]
+
+        var windows: [UsageWindow] = []
+        func add(_ id: String, _ title: String, _ percent: Double?) {
+            guard let percent else { return }
+            windows.append(UsageWindow(id: id, title: title, usedPercent: clamp(percent), resetsAt: end, length: length))
+        }
+
+        if let included = individual?["plan"] as? [String: Any], included["enabled"] as? Bool != false {
+            add("included", "Monthly", number(included["totalPercentUsed"]) ?? ratio(included))
+            add("api", "API", number(included["apiPercentUsed"]))
+        } else if let overall = individual?["overall"] as? [String: Any], let percent = ratio(overall) {
+            add("included", "Monthly", percent)
+        } else if let message = root["autoModelSelectedDisplayMessage"] as? String ?? root["namedModelSelectedDisplayMessage"] as? String {
+            add("included", "Monthly", percent(in: message))
+        }
+
+        guard !windows.isEmpty else {
+            if root["isUnlimited"] as? Bool == true {
+                return .failure(.unavailable("Your Cursor plan is unlimited: nothing to count."))
+            }
+            return .failure(.unavailable("No usage came back for this Cursor plan."))
+        }
+        return .success(AgentLimits(agent: .cursor, plan: plan, windows: windows, checkedAt: now))
+    }
+
+    /// `used` over `limit` as a percent, when there's a limit.
+    private static func ratio(_ block: [String: Any]) -> Double? {
+        guard let used = number(block["used"]), let limit = number(block["limit"]), limit > 0 else { return nil }
+        return used / limit * 100
+    }
+
+    /// "You've used 87% of your included total usage" → 87.
+    static func percent(in message: String) -> Double? {
+        guard let match = message.firstMatch(of: /(\d+(?:\.\d+)?)%/) else { return nil }
+        return Double(String(match.1))
+    }
+
+    /// The claims in a JWT's middle part.
+    static func jwtClaims(_ token: String) -> [String: Any]? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = String(parts[1]).replacing("-", with: "+").replacing("_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    static func planName(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "free_trial": "Trial"
+        case "pro_plus": "Pro+"
+        default: raw.replacing("_", with: " ").capitalized
+        }
+    }
+}
+
+/// Reads one value from a VS Code-style settings database (`ItemTable`),
+/// read-only, without waiting on the app that has it open.
+enum SettingsDatabase {
+    static func value(for key: String, in database: URL) -> String? {
+        var handle: OpaquePointer?
+        let path = database.path(percentEncoded: false)
+        guard sqlite3_open_v2(path, &handle, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK else {
+            sqlite3_close(handle)
+            return nil
+        }
+        defer { sqlite3_close(handle) }
+        sqlite3_busy_timeout(handle, 2000)
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(handle, "SELECT value FROM ItemTable WHERE key = ? LIMIT 1", -1, &statement, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
+        let text: String
+        if let cString = sqlite3_column_text(statement, 0) {
+            text = String(cString: cString)
+        } else if let blob = sqlite3_column_blob(statement, 0) {
+            text = String(decoding: Data(bytes: blob, count: Int(sqlite3_column_bytes(statement, 0))), as: UTF8.self)
+        } else {
+            return nil
+        }
+        // Some keys hold a JSON string, quotes and all.
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("\""), let decoded = try? JSONDecoder().decode(String.self, from: Data(trimmed.utf8)) {
+            return decoded
+        }
+        return trimmed
+    }
 }

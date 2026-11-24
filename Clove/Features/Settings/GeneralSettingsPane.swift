@@ -56,7 +56,18 @@ struct GeneralSettingsPane: View {
                             )
                         }
                     }
-                    SettingsToggle(title: "Agents at work beside the notch", subtitle: "Their app's icon and a dot, or a floating pill saying what they're on", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchShowsAgents)
+                    SettingsToggle(title: "Agents at work beside the notch", subtitle: "Their app's icon and a mark, or a floating pill saying what they're on", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchShowsAgents)
+                    if settings.notchShowsAgents {
+                        SettingsRow(title: "Working mark", subtitle: "Beside the notch while one agent works", symbol: "waveform", tint: Palette.Vivid.green) {
+                            HStack(spacing: 6) {
+                                ForEach(AgentMark.allCases) { mark in
+                                    AgentMarkChoice(mark: mark, isPicked: settings.agentMark == mark) {
+                                        settings.agentMark = mark
+                                    }
+                                }
+                            }
+                        }
+                    }
                     SettingsToggle(title: "Open on hover", subtitle: "Peek without clicking; it closes when you move away", symbol: "cursorarrow.rays", tint: Palette.Vivid.blue, isOn: $settings.notchOpensOnHover)
                     SettingsToggle(title: "Liquid Glass when open", subtitle: "Glass below the notch instead of solid black", symbol: "circle.lefthalf.filled", tint: Palette.Vivid.cyan, isOn: $settings.notchGlass)
                     SettingsToggle(title: "Stay open when clicking elsewhere", symbol: "pin.fill", tint: Palette.Vivid.orange, isOn: $settings.keepPanelOnTop)

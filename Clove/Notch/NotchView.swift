@@ -196,8 +196,10 @@ private extension AnyTransition {
 
 /// Shown only while an agent works: the apps it's working in on the left,
 /// fanned out when there are several, and on the right how many are at it.
-/// Nothing here animates on its own: a looping animation would redraw the
+/// Nothing here animates in SwiftUI: a looping animation would redraw the
 /// island every frame for as long as an agent works, which is most of the day.
+/// The right ear's mark is still by default; the moving ones you can pick run
+/// on Core Animation instead.
 private struct LiveEars: View {
     @Environment(NotchModel.self) private var notch
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -238,9 +240,7 @@ private struct LiveEars: View {
                         .contentTransition(.numericText())
                         .transition(reduceMotion ? .identity : .earContent)
                 } else if !working.isEmpty {
-                    Circle()
-                        .fill(Palette.mint)
-                        .frame(width: 6, height: 6)
+                    AgentMarkView(mark: notch.settings.agentMark)
                         .transition(reduceMotion ? .identity : .earContent)
                 }
             }

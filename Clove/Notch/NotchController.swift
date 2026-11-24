@@ -68,7 +68,10 @@ final class NotchController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reposition() }
+            MainActor.assumeIsolated {
+                self?.reposition()
+                self?.updateActiveTimer()
+            }
         }
         installMouseMonitors()
         followActiveDisplay()
@@ -141,6 +144,7 @@ final class NotchController {
     /// you haven't met yet.
     func setVisible(_ visible: Bool) {
         isVisible = visible
+        updateActiveTimer()
         if visible {
             WindowBridge.shared.panelWindow = window
             reposition()
@@ -178,9 +182,22 @@ final class NotchController {
                 MainActor.assumeIsolated { self?.moveToActiveDisplay() }
             },
         ]
-        // Other apps' windows moving between displays don't notify; look now and then.
-        activeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+    }
+
+    /// Other apps' windows moving between displays don't notify, so following
+    /// the active display means looking now and then. Only then: with the
+    /// island on one display, Clove sleeps instead of waking every 1.5s.
+    private func updateActiveTimer() {
+        let needed = isVisible && model.settings.islandPlacement == .active && NSScreen.screens.count > 1
+        if needed, activeTimer == nil {
+            let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.moveToActiveDisplay() }
+            }
+            timer.tolerance = 0.5
+            activeTimer = timer
+        } else if !needed {
+            activeTimer?.invalidate()
+            activeTimer = nil
         }
     }
 
@@ -359,7 +376,26 @@ final class NotchController {
                     if self.notch.phase == .open, !self.notch.isFocused { self.close() }
                 }
             }
-        case .open, .moment:
+        case .moment:
+            // A half-open moment is already in reach: resting on it opens the
+            // rest, the same as a click. One with its own button waits for
+            // the click, so the button isn't whisked away.
+            let buttons = NSEvent.pressedMouseButtons
+            if overIsland, buttons == 0, notch.moment?.action == nil, model.settings.notchOpensOnHover {
+                guard hoverTask == nil else { return }
+                hoverTask = Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(220))
+                    guard let self, !Task.isCancelled else { return }
+                    self.hoverTask = nil
+                    if self.islandRect.contains(NSEvent.mouseLocation), self.notch.phase == .moment, self.notch.moment?.action == nil {
+                        self.open(.now, focused: false)
+                    }
+                }
+            } else {
+                hoverTask?.cancel()
+                hoverTask = nil
+            }
+        case .open:
             break
         }
     }

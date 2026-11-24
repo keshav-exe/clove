@@ -43,11 +43,14 @@ extension View {
 /// the glass. Only drawn while something runs; still with Reduce Motion.
 struct BreathingGlow: View {
     let colors: [Color]
+    /// Holds one pose, for pictures of a card rather than the card itself.
+    var isStill = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
-            let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+        let still = reduceMotion || isStill
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: still)) { context in
+            let time = still ? 0 : context.date.timeIntervalSinceReferenceDate
             Canvas { canvas, size in
                 canvas.addFilter(.blur(radius: size.height * 0.26))
                 for index in 0..<3 {
