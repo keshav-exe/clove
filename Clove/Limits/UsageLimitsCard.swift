@@ -45,7 +45,7 @@ struct UsageLimitsCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("See your Claude and Codex limits")
                     .font(.system(size: 12.5, weight: .semibold))
-                Text("Reads each agent's sign-in. macOS asks first.")
+                Text("Uses the sign-ins Claude Code and Codex already saved. No password.")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

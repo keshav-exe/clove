@@ -18,6 +18,9 @@ final class NotchLiveMonitor {
         notch.agents.onFinished = { [weak self] sessions in
             self?.agentsFinished(sessions)
         }
+        notch.agents.onStarted = { [weak self] session in
+            self?.agentStarted(session)
+        }
         model.limits.onNearlyUsed = { [weak self] agent, window in
             self?.limitNearlyUsed(agent, window)
         }
@@ -70,13 +73,27 @@ final class NotchLiveMonitor {
         let who = session.agent.title
         let show = NotchMoment.Action(title: "Show") { AgentReveal.show(session) }
         if let failure = session.failure {
-            notch.present(NotchMoment(symbol: "exclamationmark.triangle", tone: .warning, title: "\(who) stopped in \(session.project)", detail: failure, action: show, duration: .seconds(8)))
+            notch.present(NotchMoment(symbol: "exclamationmark.triangle", tone: .warning, title: "\(who) stopped in \(session.project)", detail: failure, action: show, duration: .seconds(8), session: session))
         } else if session.asksQuestion {
-            notch.present(NotchMoment(symbol: "questionmark.bubble", tone: .neutral, title: "\(who) has a question in \(session.project)", detail: session.summary ?? session.title, action: show, duration: .seconds(8)))
+            notch.present(NotchMoment(symbol: "questionmark.bubble", tone: .neutral, title: "\(who) has a question in \(session.project)", detail: session.summary ?? session.title, action: show, duration: .seconds(8), session: session))
         } else {
             let took = session.duration.flatMap(Self.durationText).map { " · \($0)" } ?? ""
-            notch.present(NotchMoment(symbol: "checkmark", tone: .done, title: "\(who) finished in \(session.project)\(took)", detail: session.summary ?? session.title, action: show, duration: .seconds(6)))
+            notch.present(NotchMoment(symbol: "checkmark", tone: .done, title: "\(who) finished in \(session.project)\(took)", detail: session.summary ?? session.title, action: show, duration: .seconds(6), session: session))
         }
+    }
+
+    /// A task you just sent is under way: the notch opens a little to say so,
+    /// glowing in the app's colours, then folds back to its ears.
+    private func agentStarted(_ session: AgentSession) {
+        guard model.settings.notchAgentStartMoments else { return }
+        notch.present(NotchMoment(
+            symbol: "sparkles",
+            tone: .neutral,
+            title: session.title ?? session.project,
+            detail: session.currentStep.map { [$0.verb, $0.target].compactMap(\.self).joined(separator: " ") } ?? "Thinking",
+            duration: .seconds(3.5),
+            session: session
+        ))
     }
 
     /// "4 min", "1 hr 5 min": how long the whole task ran, background work included.

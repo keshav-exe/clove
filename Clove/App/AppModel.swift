@@ -836,7 +836,9 @@ final class AppModel {
 
 extension AppModel {
     static var preview: AppModel {
+        // Previews and tests get settings of their own, never the real ones.
         let model = AppModel(
+            settings: SettingsStore(defaults: UserDefaults(suiteName: "com.kshvbgde.clove.preview") ?? .standard),
             persistence: TagPersistence(
                 fileURL: URL.temporaryDirectory.appending(path: "clove-preview-tags.json")
             )

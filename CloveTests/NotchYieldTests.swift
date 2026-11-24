@@ -9,7 +9,7 @@ struct NotchYieldTests {
         let settings = SettingsStore(defaults: defaults)
         settings.accessMode = .notch
         let home = URL.temporaryDirectory.appending(path: "notch-yield-\(UUID().uuidString)", directoryHint: .isDirectory)
-        return NotchModel(agents: AgentActivityStore(home: home), settings: settings)
+        return NotchModel(agents: AgentActivityStore(home: home, defaults: nil), settings: settings)
     }
 
     private func moment(_ title: String) -> NotchMoment {

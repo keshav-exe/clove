@@ -108,7 +108,11 @@ struct NotchView: View {
                 .contentShape(.rect)
                 .onTapGesture { actions.open(nil) }
         case .moment:
-            if let moment = notch.moment {
+            if let moment = notch.moment, let session = moment.session {
+                AgentMomentView(moment: moment, session: session)
+                    .id(moment.id)
+                    .transition(reduceMotion ? .identity : .contentReveal)
+            } else if let moment = notch.moment {
                 MomentView(moment: moment)
                     .id(moment.id)
                     .transition(reduceMotion ? .identity : .contentReveal)
@@ -229,6 +233,89 @@ private struct LiveEars: View {
 }
 
 // MARK: - Moment
+
+/// An agent's task starting or ending, as its own card: the app it's in, the
+/// conversation, what it's doing, and a glow breathing along the bottom in
+/// the app's colours. It holds while the pointer is over it.
+private struct AgentMomentView: View {
+    @Environment(NotchModel.self) private var notch
+    @Environment(\.notchActions) private var actions
+    let moment: NotchMoment
+    let session: AgentSession
+
+    private var isStart: Bool { moment.action == nil && session.state == .working }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: notch.notchSize.height)
+            HStack(spacing: 11) {
+                AgentAppIcon(session: session, size: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.title ?? session.project)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if let action = moment.action {
+                    Button(action.title) {
+                        notch.clearMoments()
+                        notch.phase = .collapsed
+                        action.perform()
+                    }
+                    .buttonStyle(NotchPillButtonStyle(isProminent: true))
+                } else {
+                    chip
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(maxHeight: .infinity)
+        }
+        .background(alignment: .bottom) {
+            BreathingGlow(colors: glow)
+                .frame(height: 64)
+                .opacity(moment.tone == .warning ? 0.7 : 1)
+        }
+        .contentShape(.rect)
+        .onHover { notch.isHoveringMoment = $0 }
+        .onTapGesture {
+            notch.clearMoments()
+            actions.open(.now)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(moment.title + (moment.detail.map { ", " + $0 } ?? ""))
+    }
+
+    /// Who and what: "Claude in T3 Code · Edit NowBoard.swift", or the agent's last words.
+    private var subtitle: String {
+        let who: String = {
+            guard let host = session.host, !host.name.localizedCaseInsensitiveContains(session.agent.title) else { return session.agent.title }
+            return "\(session.agent.title) in \(host.name)"
+        }()
+        if isStart { return [who, moment.detail].compactMap(\.self).joined(separator: " · ") }
+        return moment.detail ?? who
+    }
+
+    /// The colours it glows in: the app's, or yellow for a stop or a question.
+    private var glow: [Color] {
+        moment.tone == .warning ? [Palette.Vivid.yellow, Palette.Vivid.orange] : session.glowColors
+    }
+
+    private var chip: some View {
+        HStack(spacing: 5) {
+            BreathingDot(color: session.glowColors.first ?? Palette.mint)
+            Text("Started")
+        }
+        .font(.system(size: 10.5, weight: .semibold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 8)
+        .frame(height: 22)
+        .background(Color.primary.opacity(0.08), in: .capsule)
+    }
+}
 
 private struct MomentView: View {
     @Environment(NotchModel.self) private var notch

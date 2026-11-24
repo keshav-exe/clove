@@ -6,38 +6,42 @@ struct ShortcutsSettingsPane: View {
     var body: some View {
         @Bindable var settings = model.settings
 
-        SettingsForm(centered: true) {
-            VStack(alignment: .leading, spacing: Metrics.spacingXL) {
-                SettingsSection {
-                    SettingsCheckboxRow(title: "Global shortcut", isOn: $settings.hotKeyEnabled)
-
-                    SettingsFieldRow(label: "Shortcut") {
-                        KeyRecorderView(chord: $settings.hotKey)
-                    }
-                    .disabled(!settings.hotKeyEnabled)
-                    .opacity(settings.hotKeyEnabled ? 1 : 0.5)
-
-                    if settings.hotKeyEnabled, settings.hotKey != nil, !settings.hotKeyIsRegistered {
-                        Text("Another app is already using that shortcut.")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                            .padding(.leading, SettingsLayout.labelWidth + Metrics.spacingM)
-                    }
+        SettingsPage {
+            Section {
+                SettingsToggle(title: "Global shortcut", subtitle: "Opens Clove from any app", symbol: "command", tint: Palette.Vivid.blue, isOn: $settings.hotKeyEnabled)
+                SettingsRow(title: "Shortcut", subtitle: "Click, then press the keys you want", symbol: "keyboard.fill", tint: Color(white: 0.45)) {
+                    KeyRecorderView(chord: $settings.hotKey)
+                        .fixedSize()
                 }
-
-                SettingsPaneDivider()
-
-                SettingsSection {
-                    SettingsShortcutRow(action: "Insert", keys: "↩")
-                    SettingsShortcutRow(action: "Copy and keep panel", keys: "⌥↩")
-                    SettingsShortcutRow(action: "Move selection", keys: "↑ ↓")
-                    SettingsShortcutRow(action: "Extend selection", keys: "⇧ ↑ ↓")
-                    SettingsShortcutRow(action: "Multi-select", keys: "⌘ click")
-                    SettingsShortcutRow(action: "Copy group", keys: "⌘⇧C")
-                    SettingsShortcutRow(action: "Cycle pinned groups", keys: "⇥")
-                    SettingsShortcutRow(action: "Close panel", keys: "esc")
+                .disabled(!settings.hotKeyEnabled)
+                if settings.hotKeyEnabled, settings.hotKey != nil, !settings.hotKeyIsRegistered {
+                    SettingsRow(title: "Another app is using that shortcut", subtitle: "Pick a different one, or quit the other app", symbol: "exclamationmark.triangle.fill", tint: Palette.Vivid.yellow) { EmptyView() }
                 }
+            } header: {
+                Text("Open Clove")
             }
+
+            Section("In the Panel") {
+                shortcut("Insert into the app you were in", ["↩"])
+                shortcut("Copy, and keep the panel open", ["⌥", "↩"])
+                shortcut("Move the selection", ["↑", "↓"])
+                shortcut("Extend the selection", ["⇧", "↑", "↓"])
+                shortcut("Select several", ["⌘", "Click"])
+                shortcut("Copy a whole group", ["⌘", "⇧", "C"])
+                shortcut("Cycle pinned groups", ["⇥"])
+                shortcut("Close", ["esc"])
+            }
+
+            Section("In the Notch") {
+                shortcut("Switch tabs", ["⌘", "1 – 4"])
+                shortcut("Close", ["esc"])
+            }
+        }
+    }
+
+    private func shortcut(_ action: String, _ keys: [String]) -> some View {
+        LabeledContent(action) {
+            KeyCaps(keys: keys)
         }
     }
 }

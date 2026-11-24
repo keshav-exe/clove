@@ -1,31 +1,20 @@
 import SwiftUI
 
+/// Clove's settings, in the window every Mac app uses for them: a toolbar of
+/// panes across the top, each a grouped form.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(UpdateService.self) private var updates
     @Bindable private var router = SettingsRouter.shared
 
-    private var pane: SettingsPane { router.pane }
-
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsTabBar(selection: $router.pane)
-
-            Divider()
-
-            Text(pane.title)
-                .font(.title3.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.top, Metrics.spacingM)
-                .padding(.bottom, Metrics.spacingS)
-                .accessibilityAddTraits(.isHeader)
-
-            paneView(pane)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(pane)
+        TabView(selection: $router.pane) {
+            ForEach(SettingsPane.visibleCases) { pane in
+                paneView(pane)
+                    .tabItem { Label(pane.title, systemImage: pane.symbolName) }
+                    .tag(pane)
+            }
         }
-        .frame(width: Metrics.settingsWidth, height: Metrics.settingsHeight)
-        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     @ViewBuilder

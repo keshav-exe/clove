@@ -12,6 +12,11 @@ final class AgentActivityStore {
     /// Tasks that ended while Clove was watching, gathered over a few seconds
     /// so agents finishing together arrive together.
     var onFinished: ([AgentSession]) -> Void = { _ in }
+    /// A task you just sent started, once per task. Not for tasks already
+    /// under way when Clove opened.
+    var onStarted: (AgentSession) -> Void = { _ in }
+    /// Long enough to find the app it's in, and to skip quick replies.
+    static let startDelay: Duration = .milliseconds(1500)
     /// How long a task has to stay ended before it's announced: a stop hook or
     /// a queued message can start it again straight away.
     static let settleDelay: Duration = .seconds(4)
@@ -29,11 +34,37 @@ final class AgentActivityStore {
     @ObservationIgnored private var announced: [String: String] = [:]
     @ObservationIgnored private var settling: Set<String> = []
     @ObservationIgnored private var settleTask: Task<Void, Never>?
+    /// The task each session last announced starting.
+    @ObservationIgnored private var announcedStart: [String: String] = [:]
+    /// The first read at launch finds tasks already going; they don't count as starting.
+    @ObservationIgnored private var hasLoaded = false
 
     private let home: URL
+    private let defaults: UserDefaults?
 
-    init(home: URL = .homeDirectory) {
+    /// `defaults` remembers which app each conversation is in, so a task that
+    /// ended while Clove was closed still shows T3 Code, not a stand-in.
+    init(home: URL = .homeDirectory, defaults: UserDefaults? = .standard) {
         self.home = home
+        self.defaults = defaults
+        hosts = Self.loadHosts(from: defaults)
+    }
+
+    private static let hostsKey = "agentHosts"
+
+    /// Saved as transcript path → [bundle path, name, bundle id]. The agent's
+    /// process isn't kept: after a restart it would name the wrong one.
+    private static func loadHosts(from defaults: UserDefaults?) -> [String: AgentHost] {
+        let raw = defaults?.dictionary(forKey: hostsKey) as? [String: [String]] ?? [:]
+        return raw.compactMapValues { fields in
+            guard fields.count >= 2, FileManager.default.fileExists(atPath: fields[0]) else { return nil }
+            return AgentHost(bundlePath: fields[0], bundleID: fields.count > 2 && !fields[2].isEmpty ? fields[2] : nil, name: fields[1], agentPID: 0)
+        }
+    }
+
+    private func saveHosts() {
+        let raw = hosts.mapValues { [$0.bundlePath, $0.name, $0.bundleID ?? ""] }
+        defaults?.set(raw, forKey: Self.hostsKey)
     }
 
     private var claudeRoot: URL { home.appending(path: ".claude/projects", directoryHint: .isDirectory) }
@@ -115,13 +146,37 @@ final class AgentActivityStore {
                 }
                 let previous = byID[path]
                 byID[path] = session
-                if session.state == .working { seenWorking.insert(path) }
+                if session.state == .working {
+                    seenWorking.insert(path)
+                    if hasLoaded, previous?.state != .working || previous?.promptID != session.promptID {
+                        noteStart(path, session)
+                    } else if !hasLoaded {
+                        announcedStart[path] = session.promptID ?? ""
+                    }
+                }
                 if session.state == .finished, previous?.state != .finished, seenWorking.contains(path) {
                     settle(path)
                 }
             }
+            hasLoaded = true
             publish()
             findHosts()
+        }
+    }
+
+    /// Announces a task starting once it's still going after a moment, with
+    /// its app if Clove has found it by then. A task that pauses for
+    /// background work and picks up again is the same task, announced once.
+    private func noteStart(_ path: String, _ session: AgentSession) {
+        let prompt = session.promptID ?? ""
+        guard announcedStart[path] != prompt else { return }
+        announcedStart[path] = prompt
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.startDelay)
+            guard let self, var current = byID[path], current.state == .working,
+                  (current.promptID ?? "") == prompt else { return }
+            current.host = hosts[path]
+            onStarted(current)
         }
     }
 
@@ -151,7 +206,8 @@ final class AgentActivityStore {
     private func findHosts() {
         let now = Date.now
         let missing = byID.values.filter { session in
-            hosts[session.id] == nil && session.folder != nil
+            // A remembered app is kept, but a live process is better: it finds the terminal tab.
+            (hosts[session.id] == nil || hosts[session.id]?.agentPID == 0 && session.state == .working) && session.folder != nil
                 && (lastHostLookup[session.id].map { now.timeIntervalSince($0) > 15 } ?? true)
         }
         guard !missing.isEmpty else { return }
@@ -162,20 +218,36 @@ final class AgentActivityStore {
             let sample = await ProcessMonitor.shared.sample(maxAge: .seconds(5))
             let found = await Task.detached(priority: .utility) {
                 jobs.compactMap { id, folder, agent in
-                    AgentHostFinder.find(folder: folder, agent: agent, sample: sample, apps: apps, workingFolder: ProcessMonitor.workingFolder(of:))
+                    AgentHostFinder.find(
+                        folder: folder, agent: agent, sample: sample, apps: apps,
+                        workingFolder: ProcessMonitor.workingFolder(of:),
+                        conversationID: AgentHostFinder.conversationID(fromTranscript: id)
+                    )
                         .map { (id, $0) }
                 }
             }.value
             guard !found.isEmpty else { return }
             for (id, host) in found { hosts[id] = host }
+            saveHosts()
             publish()
         }
+    }
+
+    nonisolated private static func recentlyWritten(_ path: String, now: Date) -> Bool {
+        guard let modified = try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date else { return false }
+        return now.timeIntervalSince(modified) < 86_400
     }
 
     private func publish() {
         let now = Date.now
         byID = byID.filter { Self.isFresh($0.value, now: now) }
-        hosts = hosts.filter { byID[$0.key] != nil }
+        // Remembered apps outlive a session on the board by a day, for when it comes back.
+        if hasLoaded {
+            let before = hosts.count
+            hosts = hosts.filter { byID[$0.key] != nil || Self.recentlyWritten($0.key, now: now) }
+            if hosts.count != before { saveHosts() }
+        }
+        announcedStart = announcedStart.filter { byID[$0.key] != nil }
         lastHostLookup = lastHostLookup.filter { byID[$0.key] != nil }
         let next = byID.values.map { session in
             var session = session

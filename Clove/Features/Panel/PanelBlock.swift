@@ -79,18 +79,27 @@ extension SettingsStore {
         panelBlocks.contains(panelBlock) ? panelBlock : (panelBlocks.first ?? .skills)
     }
 
-    /// Adds or removes a block. One always stays, or the panel would be empty,
-    /// and blocks keep the catalogue's order however they were added.
+    /// Adds or removes a block. One always stays, or the panel would be empty.
+    /// A block added goes on the end; Settings reorders them by dragging.
     func setBlock(_ block: PanelBlock, included: Bool) {
         if included {
-            guard panelBlocks.count < PanelBlock.maxTabs || panelBlocks.contains(block) else { return }
-            panelBlocks = PanelBlock.allCases.filter { panelBlocks.contains($0) || $0 == block }
+            guard panelBlocks.count < PanelBlock.maxTabs, !panelBlocks.contains(block) else { return }
+            panelBlocks.append(block)
         } else {
             guard panelBlocks != [block] else { return }
             panelBlocks.removeAll { $0 == block }
             if panelBlock == block, let first = panelBlocks.first {
                 panelBlock = first
             }
+        }
+    }
+
+    /// Every block in Settings' order: yours first, then the rest.
+    var blockOrderBinding: Binding<[PanelBlock]> {
+        Binding {
+            self.panelBlocks + PanelBlock.allCases.filter { !self.panelBlocks.contains($0) }
+        } set: { order in
+            self.panelBlocks = order.filter { self.panelBlocks.contains($0) }
         }
     }
 

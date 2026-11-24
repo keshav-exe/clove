@@ -16,17 +16,23 @@ enum AgentHostFinder {
     /// The host of the agent working in `folder`: a process whose command line
     /// names the agent and whose working folder is `folder`, then the nearest
     /// Dock app above it. The newest such process wins.
+    ///
+    /// A process that names the conversation itself (`--resume <id>`, as T3
+    /// Code and the Claude app start them) beats one that only shares its
+    /// folder: two apps can each have an agent in the same project.
     static func find(
         folder: String,
         agent: AgentSession.Agent,
         sample: ProcessSample,
         apps: [String: RunningAppInfo],
-        workingFolder: (Int32) -> String?
+        workingFolder: (Int32) -> String?,
+        conversationID: String? = nil
     ) -> AgentHost? {
         let word = agent == .claude ? "claude" : "codex"
-        let candidates = sample.table.entries.values
+        let named = sample.table.entries.values
             .filter { $0.args.lowercased().contains(word) && !ActivityReport.shells.contains($0.program) }
-            .filter { workingFolder($0.pid) == folder }
+        let exact = conversationID.map { id in named.filter { $0.args.contains(id) } } ?? []
+        let candidates = (exact.isEmpty ? named.filter { workingFolder($0.pid) == folder } : exact)
             .sorted { $0.elapsed < $1.elapsed }
 
         for candidate in candidates {
@@ -36,6 +42,15 @@ enum AgentHostFinder {
             }
         }
         return nil
+    }
+
+    /// The conversation's ID from its transcript's name: Claude Code names the
+    /// file after it, Codex ends its rollout name with it.
+    static func conversationID(fromTranscript path: String) -> String? {
+        let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+        guard name.count >= 36 else { return nil }
+        let id = String(name.suffix(36))
+        return UUID(uuidString: id) == nil ? nil : id
     }
 }
 

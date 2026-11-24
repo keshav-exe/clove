@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 /// One rolling limit on a plan: Claude's five hours, Codex's week.
 struct UsageWindow: Identifiable, Hashable, Sendable {
@@ -36,7 +35,7 @@ enum LimitsFailure: Error, Equatable, Sendable {
     case notSignedIn(String)
     /// The saved sign-in has expired; opening the agent refreshes it.
     case expired
-    /// Keychain access was refused.
+    /// Clove couldn't read the sign-in.
     case denied
     case unavailable(String)
 
@@ -66,27 +65,45 @@ enum ClaudeLimitsClient {
         FileManager.default.fileExists(atPath: URL.homeDirectory.appending(path: ".claude").path(percentEncoded: false))
     }
 
-    /// Reads Claude Code's sign-in. The first read shows macOS's Keychain prompt.
+    /// Reads Claude Code's sign-in from the Keychain with macOS's own
+    /// `security` tool, the way Claude Code saves it there. Because that tool
+    /// wrote the item, reading it this way doesn't make macOS ask for your
+    /// password, and it keeps working each time Claude Code refreshes its
+    /// sign-in. Falls back to `~/.claude/.credentials.json`.
     @concurrent
     static func credentials() async -> Result<Credentials, LimitsFailure> {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "Claude Code-credentials",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        var data = item as? Data
-        if status == errSecUserCanceled || status == errSecAuthFailed || status == errSecInteractionNotAllowed {
-            return .failure(.denied)
+        if let data = await keychainItem(service: "Claude Code-credentials") {
+            return parseCredentials(data)
         }
-        if data == nil {
-            // Older installs, and Linux-style setups, keep it in a file.
-            data = try? Data(contentsOf: URL.homeDirectory.appending(path: ".claude/.credentials.json"))
+        if let data = try? Data(contentsOf: URL.homeDirectory.appending(path: ".claude/.credentials.json")) {
+            return parseCredentials(data)
         }
-        guard let data else { return .failure(.notSignedIn("Sign in to Claude Code with your Claude plan to see its limits.")) }
-        return parseCredentials(data)
+        return .failure(.notSignedIn("Sign in to Claude Code with your Claude plan to see its limits."))
+    }
+
+    /// `security find-generic-password -s <service> -w`, with a time limit so
+    /// a stuck Keychain never holds up the board.
+    @concurrent
+    private static func keychainItem(service: String) async -> Data? {
+        let process = Process()
+        process.executableURL = URL(filePath: "/usr/bin/security")
+        process.arguments = ["find-generic-password", "-s", service, "-w"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch { return nil }
+        let deadline = Date.now.addingTimeInterval(5)
+        while process.isRunning, Date.now < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        if process.isRunning {
+            process.terminate()
+            return nil
+        }
+        guard process.terminationStatus == 0 else { return nil }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let trimmed = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : Data(trimmed.utf8)
     }
 
     static func parseCredentials(_ data: Data) -> Result<Credentials, LimitsFailure> {

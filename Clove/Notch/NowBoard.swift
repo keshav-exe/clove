@@ -330,7 +330,7 @@ private struct StateChip: View {
 }
 
 /// A dot that slowly swells and fades, in time with the card's glow.
-private struct BreathingDot: View {
+struct BreathingDot: View {
     let color: Color
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFull = false

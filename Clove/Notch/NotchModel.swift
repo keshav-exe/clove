@@ -25,6 +25,8 @@ struct NotchMoment: Identifiable, Equatable {
     let detail: String?
     var action: Action?
     var duration: Duration = .seconds(5)
+    /// An agent's task starting or ending: shown as its card, glowing in its app's colours.
+    var session: AgentSession? = nil
 }
 
 /// The island's state: how open it is and what it's showing.
@@ -136,7 +138,9 @@ final class NotchModel {
                 body = notch
             }
         case .moment:
-            body = CGSize(width: max(Self.momentWidth, notch.width + 120), height: notch.height + 58)
+            // An agent's card is a touch taller, so its glow has room to breathe.
+            let tall = moment?.session != nil
+            body = CGSize(width: max(Self.momentWidth, notch.width + 120), height: notch.height + (tall ? 62 : 58))
         case .open:
             let content = tab.fitsContent ? min(max(measuredHeights[tab] ?? 160, 72), Self.contentHeight) : Self.contentHeight
             body = CGSize(width: Self.panelWidth, height: notch.height + content)

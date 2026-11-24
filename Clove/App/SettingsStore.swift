@@ -82,6 +82,11 @@ final class SettingsStore {
         didSet { defaults.set(notchAgentMoments, forKey: Keys.notchAgentMoments) }
     }
 
+    /// ...when an agent starts a task you sent it.
+    var notchAgentStartMoments: Bool {
+        didSet { defaults.set(notchAgentStartMoments, forKey: Keys.notchAgentStartMoments) }
+    }
+
     /// ...when a dev server starts or stops.
     var notchServerMoments: Bool {
         didSet { defaults.set(notchServerMoments, forKey: Keys.notchServerMoments) }
@@ -195,6 +200,7 @@ final class SettingsStore {
         menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
         notchGlass = defaults.flag(Keys.notchGlass, default: true)
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
+        notchAgentStartMoments = defaults.flag(Keys.notchAgentStartMoments, default: true)
         notchServerMoments = defaults.flag(Keys.notchServerMoments, default: true)
         notchStorageMoments = defaults.flag(Keys.notchStorageMoments, default: true)
         nowShowsDevServers = defaults.flag(Keys.nowShowsDevServers, default: true)
@@ -294,6 +300,7 @@ final class SettingsStore {
         static let offeredNowBlock = "offeredNowBlock"
         static let notchGlass = "notchGlass"
         static let notchAgentMoments = "notchAgentMoments"
+        static let notchAgentStartMoments = "notchAgentStartMoments"
         static let notchServerMoments = "notchServerMoments"
         static let notchStorageMoments = "notchStorageMoments"
         static let lastSeenWhatsNewVersion = "lastSeenWhatsNewVersion"

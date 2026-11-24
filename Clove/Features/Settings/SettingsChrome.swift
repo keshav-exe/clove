@@ -1,188 +1,203 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
-enum SettingsLayout {
-    static let labelWidth: Double = 112
-    static let contentMaxWidth: Double = 360
-    static let shortcutKeyWidth: Double = 132
-}
-
-// MARK: - Tab bar
-
-struct SettingsTabBar: View {
-    @Binding var selection: SettingsPane
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+/// Every pane is a grouped form, the way System Settings lays itself out:
+/// rounded groups, a label on the left and its control on the right.
+struct SettingsPage<Content: View>: View {
+    @ViewBuilder let content: Content
 
     var body: some View {
-        HStack(spacing: Metrics.spacingXS) {
-            ForEach(SettingsPane.visibleCases) { pane in
-                SettingsTabButton(
-                    pane: pane,
-                    isSelected: selection == pane
-                ) {
-                    selection = pane
-                }
-            }
+        Form {
+            content
         }
-        .padding(.horizontal, Metrics.spacingL)
-        .padding(.vertical, Metrics.spacingM)
-        .animation(Motion.selection(reduceMotion), value: selection)
+        .formStyle(.grouped)
+        .frame(width: SettingsMetrics.width, height: SettingsMetrics.height)
     }
 }
 
-private struct SettingsTabButton: View {
-    let pane: SettingsPane
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 5) {
-                Image(systemName: pane.symbolName)
-                    .font(.system(size: 17, weight: .medium))
-                    .symbolRenderingMode(.hierarchical)
-
-                Text(pane.title)
-                    .font(.caption)
-            }
-            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: Metrics.rowRadius, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.14))
-                }
-            }
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
+enum SettingsMetrics {
+    static let width: CGFloat = 620
+    static let height: CGFloat = 600
 }
 
-// MARK: - Sections
+// MARK: - Icons
 
-struct SettingsSection<Content: View>: View {
-    var title: String?
-    var footer: String?
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Metrics.spacingS) {
-            if let title {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-
-            content()
-
-            if let footer {
-                Text(footer)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-}
-
-struct SettingsInsetGroup<Content: View>: View {
-    @ViewBuilder let content: () -> Content
+/// A setting's icon: a flat tinted square holding a white symbol, like the
+/// sidebar of System Settings.
+struct SettingsIcon: View {
+    let symbol: String
+    var tint: Color = .gray
+    var size: CGFloat = 22
 
     var body: some View {
-        VStack(spacing: 0) {
-            content()
-        }
-        .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: Metrics.rowRadius + 1, style: .continuous))
-    }
-}
-
-struct SettingsPaneDivider: View {
-    var body: some View {
-        Divider()
-            .padding(.vertical, Metrics.spacingS)
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.5, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(tint, in: .rect(cornerRadius: size * 0.27, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 
 // MARK: - Rows
 
-struct SettingsCheckboxRow: View {
+/// A row's label: icon, title, and an optional line explaining it.
+struct SettingsLabel: View {
     let title: String
+    var subtitle: String?
+    var symbol: String?
+    var tint: Color = .gray
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let symbol {
+                SettingsIcon(symbol: symbol, tint: tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
+/// A label on the left, anything on the right.
+struct SettingsRow<Trailing: View>: View {
+    let title: String
+    var subtitle: String?
+    var symbol: String?
+    var tint: Color = .gray
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        LabeledContent {
+            trailing
+        } label: {
+            SettingsLabel(title: title, subtitle: subtitle, symbol: symbol, tint: tint)
+        }
+    }
+}
+
+/// An on/off setting, as a switch on the right.
+struct SettingsToggle: View {
+    let title: String
+    var subtitle: String?
+    var symbol: String?
+    var tint: Color = .gray
     @Binding var isOn: Bool
-    var isDisabled = false
 
     var body: some View {
         Toggle(isOn: $isOn) {
-            Text(title)
-                .font(.callout)
+            SettingsLabel(title: title, subtitle: subtitle, symbol: symbol, tint: tint)
         }
-        .toggleStyle(.checkbox)
-        .disabled(isDisabled)
-        .padding(.vertical, 3)
+        .toggleStyle(.switch)
+        .controlSize(.small)
     }
 }
 
-struct SettingsFieldRow<Value: View>: View {
-    let label: String
-    @ViewBuilder let value: () -> Value
+/// Keys as keycaps: "⌘", "⇧", "C".
+struct KeyCaps: View {
+    let keys: [String]
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Metrics.spacingM) {
-            Text(label)
-                .foregroundStyle(.secondary)
-                .frame(width: SettingsLayout.labelWidth, alignment: .trailing)
-
-            value()
-
-            Spacer(minLength: 0)
-        }
-        .font(.callout)
-        .padding(.vertical, 5)
-    }
-}
-
-struct SettingsShortcutRow: View {
-    let action: String
-    let keys: String
-
-    var body: some View {
-        HStack(spacing: Metrics.spacingM) {
-            Text(action)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
-            Text(keys)
-                .frame(width: SettingsLayout.shortcutKeyWidth, alignment: .leading)
-        }
-        .font(.callout)
-        .padding(.vertical, 4)
-    }
-}
-
-struct SettingsPromiseRow: View {
-    let promise: PrivacyPromise
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Metrics.spacingM) {
-            Image(systemName: promise.symbolName)
-                .font(.system(size: 14, weight: .medium))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(promise.title)
-                    .font(.callout)
-
-                Text(promise.detail)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 4) {
+            ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
+                Text(key)
+                    .font(.system(size: 11.5, weight: .medium, design: key.count > 1 ? .default : .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, key.count > 1 ? 7 : 0)
+                    .frame(minWidth: 22, minHeight: 22)
+                    .background(.background, in: .rect(cornerRadius: 5, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(.separator, lineWidth: 0.5)
+                    }
+                    .shadow(color: .black.opacity(0.12), radius: 0, y: 1)
             }
-
-            Spacer(minLength: 0)
         }
-        .padding(.vertical, 6)
+        .accessibilityElement()
+        .accessibilityLabel(keys.joined(separator: " "))
     }
+}
+
+/// A small coloured status: "Allowed", "Found", "Connected".
+struct StatusBadge: View {
+    let text: String
+    var tint: Color = Palette.mint
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle().fill(tint).frame(width: 6, height: 6)
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Reordering
+
+/// Rows you rearrange by dragging, with a grip on each. The list moves as you
+/// drag, so you see where a row lands before you let go.
+struct ReorderableRows<Item: Hashable & Identifiable, Row: View>: View where Item.ID: CustomStringConvertible {
+    @Binding var items: [Item]
+    @ViewBuilder let row: (Item) -> Row
+    @State private var dragging: Item?
+
+    var body: some View {
+        ForEach(items) { item in
+            HStack(spacing: 10) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 14)
+                    .help("Drag to reorder")
+                row(item)
+            }
+            .contentShape(.rect)
+            .opacity(dragging == item ? 0.35 : 1)
+            .onDrag {
+                dragging = item
+                // A drop outside the list never reaches the rows; let go anywhere and the row comes back.
+                Task { @MainActor in
+                    while NSEvent.pressedMouseButtons != 0 { try? await Task.sleep(for: .milliseconds(80)) }
+                    dragging = nil
+                }
+                return NSItemProvider(object: item.id.description as NSString)
+            }
+            .onDrop(of: [.text], delegate: ReorderDelegate(item: item, items: $items, dragging: $dragging))
+        }
+    }
+}
+
+private struct ReorderDelegate<Item: Hashable>: DropDelegate {
+    let item: Item
+    @Binding var items: [Item]
+    @Binding var dragging: Item?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != item,
+              let from = items.firstIndex(of: dragging),
+              let to = items.firstIndex(of: item) else { return }
+        withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+            items.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+
+    func dropExited(info: DropInfo) {}
 }
