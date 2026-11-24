@@ -48,6 +48,12 @@ struct NotchView: View {
         }
     }
 
+    /// The glass arrives late and leaves early, so it's only seen still.
+    private func glassFade(showing: Bool) -> Animation? {
+        if reduceMotion { return nil }
+        return showing ? .easeOut(duration: 0.18).delay(0.2) : .easeIn(duration: 0.08)
+    }
+
     private var shape: NotchShape {
         NotchShape(topRadius: notch.shoulderRadius, bottomRadius: notch.bottomRadius, isFloating: notch.isFloating)
     }
@@ -56,8 +62,13 @@ struct NotchView: View {
     private var island: some View {
         ZStack(alignment: .top) {
             background
-            content
-                .padding(.horizontal, notch.shoulderRadius)
+            // The content may be bigger than the island mid-spring: it hangs
+            // over a clear layer, so only the island's own size is laid out,
+            // and the shape trims what hasn't been uncovered yet.
+            Color.clear
+                .overlay(alignment: .top) {
+                    content.padding(.horizontal, notch.shoulderRadius)
+                }
                 .clipShape(shape)
         }
         .contentShape(shape)
@@ -80,21 +91,31 @@ struct NotchView: View {
                 if glass {
                     Color.clear
                         .glassEffect(.regular, in: shape)
+                    // The tint under the glass: black where it meets the notch,
+                    // thinning below it as far as the clarity setting asks.
+                    let clarity = model.settings.notchGlassClarity
+                    let tint = { (frosted: Double, clear: Double) in frosted + (clear - frosted) * clarity }
+                    let top = notch.isFloating ? tint(0.7, 0.22) : 1
                     shape.fill(LinearGradient(
                         stops: [
-                            .init(color: .black.opacity(notch.isFloating ? 0.62 : 1), location: 0),
-                            .init(color: .black.opacity(notch.isFloating ? 0.62 : 1), location: band),
-                            .init(color: .black.opacity(0.5), location: min(1, band + 0.16)),
-                            .init(color: .black.opacity(0.32), location: 1),
+                            .init(color: .black.opacity(top), location: 0),
+                            .init(color: .black.opacity(top), location: band),
+                            .init(color: .black.opacity(tint(0.66, 0.2)), location: min(1, band + 0.16)),
+                            .init(color: .black.opacity(tint(0.5, 0.08)), location: 1),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     ))
                 }
                 // Solid while closed, so the tucked island is the notch's own black.
+                // It also stays solid while the shape grows or shrinks: glass
+                // reshaped every frame smears into a grey slab with a ghost of
+                // the board in it. So the island morphs as crisp black, the
+                // glass shows through once it has nearly opened, and goes
+                // dark again the instant it starts to close.
                 shape
                     .fill(.black)
-                    .opacity(expanded && glass ? 0 : 1)
+                    .animation(glassFade(showing: expanded)) { $0.opacity(expanded && glass ? 0 : 1) }
             }
         } else {
             ZStack {
@@ -108,19 +129,27 @@ struct NotchView: View {
     @ViewBuilder
     private var content: some View {
         let band = notch.notchSize.height
+        // Each state lays out at its final size the moment it arrives, pinned
+        // to the top centre, so the island grows around it like a curtain
+        // drawing back. Sized by the animating island, it would reflow every
+        // frame and slide in from the sides.
+        let target = notch.size
+        let width = target.width - notch.shoulderRadius * 2
         switch notch.phase {
         case .collapsed:
             LiveEars()
-                .frame(height: band)
+                .frame(width: width, height: band)
                 .contentShape(.rect)
                 .onTapGesture { actions.open(nil) }
         case .moment:
             if let moment = notch.moment, let session = moment.session {
                 AgentMomentView(moment: moment, session: session)
+                    .frame(width: width, height: target.height, alignment: .top)
                     .id(moment.id)
                     .transition(reduceMotion ? .identity : .contentReveal)
             } else if let moment = notch.moment {
                 MomentView(moment: moment)
+                    .frame(width: width, height: target.height, alignment: .top)
                     .id(moment.id)
                     .transition(reduceMotion ? .identity : .contentReveal)
             }
@@ -143,6 +172,7 @@ struct NotchView: View {
                         .transition(reduceMotion ? .identity : .opacity.animation(.easeOut(duration: 0.12)))
                 }
             }
+            .frame(width: width, height: target.height, alignment: .top)
             .transition(reduceMotion ? .identity : .contentReveal)
         }
     }
@@ -171,13 +201,27 @@ private struct IslandShadow: View {
     }
 }
 
+/// How far content is from arriving: 1 is blurred, faint and a little small.
+private struct Reveal: ViewModifier {
+    let amount: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(1 - 0.04 * amount, anchor: .top)
+            .blur(radius: 8 * amount)
+            .opacity(1 - amount)
+    }
+}
+
 private extension AnyTransition {
-    /// Content waits for the island to start growing, then fades in from just
-    /// below full size; it leaves at once, so it's never squeezed by a
-    /// shrinking shape. Only opacity and scale: a blur over glass costs frames.
+    /// Content comes up out of a soft blur as the island opens over it, a
+    /// touch small and growing into place from the top; it leaves at once, so
+    /// it's never squeezed by a shrinking shape. The blur only runs for the
+    /// fifth of a second it takes to arrive.
     static var contentReveal: AnyTransition {
         .asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)).animation(.easeOut(duration: 0.2).delay(0.06)),
+            insertion: .modifier(active: Reveal(amount: 1), identity: Reveal(amount: 0))
+                .animation(.easeOut(duration: 0.26).delay(0.05)),
             removal: .opacity.animation(.easeIn(duration: 0.08))
         )
     }

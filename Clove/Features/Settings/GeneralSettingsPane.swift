@@ -70,6 +70,21 @@ struct GeneralSettingsPane: View {
                     }
                     SettingsToggle(title: "Open on hover", subtitle: "Peek without clicking; it closes when you move away", symbol: "cursorarrow.rays", tint: Palette.Vivid.blue, isOn: $settings.notchOpensOnHover)
                     SettingsToggle(title: "Liquid Glass when open", subtitle: "Glass below the notch instead of solid black", symbol: "circle.lefthalf.filled", tint: Palette.Vivid.cyan, isOn: $settings.notchGlass)
+                    if settings.notchGlass {
+                        SettingsRow(title: "Glass", subtitle: "From frosted to clear, like the system's own", symbol: "drop.halffull", tint: Palette.Vivid.cyan) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.fill.on.square.fill")
+                                    .help("Frosted")
+                                Slider(value: $settings.notchGlassClarity, in: 0...1)
+                                    .frame(width: 160)
+                                    .accessibilityLabel("Glass clarity")
+                                Image(systemName: "square.on.square")
+                                    .help("Clear")
+                            }
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
                     SettingsToggle(title: "Stay open when clicking elsewhere", symbol: "pin.fill", tint: Palette.Vivid.orange, isOn: $settings.keepPanelOnTop)
                 }
 

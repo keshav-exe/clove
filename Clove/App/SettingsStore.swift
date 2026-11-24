@@ -77,6 +77,15 @@ final class SettingsStore {
         didSet { defaults.set(notchGlass, forKey: Keys.notchGlass) }
     }
 
+    /// How much of what's behind the open island shows through its glass:
+    /// 0 is frosted and dark, 1 is as clear as glass gets and stays readable.
+    var notchGlassClarity: Double {
+        didSet { defaults.set(notchGlassClarity, forKey: Keys.notchGlassClarity) }
+    }
+
+    /// Midway: close to the system's own glass, still dark enough to read over a busy wallpaper.
+    static let defaultGlassClarity = 0.5
+
     /// The notch grows for a moment when an agent finishes a turn.
     var notchAgentMoments: Bool {
         didSet { defaults.set(notchAgentMoments, forKey: Keys.notchAgentMoments) }
@@ -214,6 +223,7 @@ final class SettingsStore {
         accessMode = defaults.string(forKey: Keys.accessMode).flatMap(AccessMode.init(rawValue:)) ?? .notch
         menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
         notchGlass = defaults.flag(Keys.notchGlass, default: true)
+        notchGlassClarity = (defaults.object(forKey: Keys.notchGlassClarity) as? Double).map { min(max($0, 0), 1) } ?? Self.defaultGlassClarity
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
         notchAgentStartMoments = defaults.flag(Keys.notchAgentStartMoments, default: true)
         notchShowsAgents = defaults.flag(Keys.notchShowsAgents, default: true)
@@ -317,6 +327,7 @@ final class SettingsStore {
         static let menuBarStat = "menuBarStat"
         static let offeredNowBlock = "offeredNowBlock"
         static let notchGlass = "notchGlass"
+        static let notchGlassClarity = "notchGlassClarity"
         static let notchAgentMoments = "notchAgentMoments"
         static let notchAgentStartMoments = "notchAgentStartMoments"
         static let notchShowsAgents = "notchShowsAgents"
