@@ -312,6 +312,34 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.6",
+            title: "What's New in Clove 3.6",
+            subtitle: "Agents at a glance in the notch, and Settings rebuilt from the ground up.",
+            symbolName: "sparkles",
+            features: [
+                FeatureHighlight(
+                    symbolName: "sparkles",
+                    title: "Agents, at a Glance",
+                    detail: "The notch opens for a moment when an agent starts or finishes a task, glowing in the colours of the app it's in."
+                ),
+                FeatureHighlight(
+                    symbolName: "gearshape",
+                    title: "Settings, Rebuilt",
+                    detail: "Switches, icons, and a line on what each option does. Drag sections and tabs into your order, with a live drawing of the notch."
+                ),
+                FeatureHighlight(
+                    symbolName: "key",
+                    title: "No More Password Prompts",
+                    detail: "Clove reads Claude Code's sign-in the way Claude Code saves it, so macOS stops asking each time it refreshes."
+                ),
+                FeatureHighlight(
+                    symbolName: "app.badge.checkmark",
+                    title: "The Right App",
+                    detail: "Conversations keep their app's icon across restarts, even when two apps work in the same project."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
