@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Claude and Codex plan limits, checked every few minutes while turned on.
+/// Claude, Codex and Cursor plan limits, checked every few minutes while turned on.
 @MainActor
 @Observable
 final class UsageLimitsStore {
@@ -17,21 +17,21 @@ final class UsageLimitsStore {
     }
 
     /// One entry per agent that's installed, Claude first.
-    private(set) var states: [AgentSession.Agent: State] = [:]
+    private(set) var states: [LimitsAgent: State] = [:]
     /// A window crossed into its last tenth since the previous check.
-    var onNearlyUsed: (AgentSession.Agent, UsageWindow) -> Void = { _, _ in }
+    var onNearlyUsed: (LimitsAgent, UsageWindow) -> Void = { _, _ in }
 
     @ObservationIgnored private var claudeCredentials: ClaudeLimitsClient.Credentials?
     @ObservationIgnored private var lastCheck: Date?
     @ObservationIgnored private var isChecking = false
     @ObservationIgnored private var warned: Set<String> = []
 
-    var agents: [AgentSession.Agent] {
-        [.claude, .codex].filter { states[$0] != nil }
+    var agents: [LimitsAgent] {
+        LimitsAgent.allCases.filter { states[$0] != nil }
     }
 
     static var anyInstalled: Bool {
-        ClaudeLimitsClient.isInstalled || CodexLimitsClient.isInstalled
+        ClaudeLimitsClient.isInstalled || CodexLimitsClient.isInstalled || CursorLimitsClient.isInstalled
     }
 
     /// Checks unless a check finished less than `maxAge` ago.
@@ -43,7 +43,8 @@ final class UsageLimitsStore {
 
         async let claude: State? = ClaudeLimitsClient.isInstalled ? await checkClaude() : nil
         async let codex: State? = CodexLimitsClient.isInstalled ? Self.state(await CodexLimitsClient.fetch()) : nil
-        let results: [(AgentSession.Agent, State?)] = [(.claude, await claude), (.codex, await codex)]
+        async let cursor: State? = CursorLimitsClient.isInstalled ? Self.state(await CursorLimitsClient.fetch()) : nil
+        let results: [(LimitsAgent, State?)] = [(.claude, await claude), (.codex, await codex), (.cursor, await cursor)]
 
         for (agent, state) in results {
             guard let state else { states[agent] = nil; continue }
@@ -66,7 +67,7 @@ final class UsageLimitsStore {
 
     #if DEBUG
     /// For previews and snapshot checks.
-    func showPreview(_ states: [AgentSession.Agent: State]) { self.states = states }
+    func showPreview(_ states: [LimitsAgent: State]) { self.states = states }
     #endif
 
     func reset() {

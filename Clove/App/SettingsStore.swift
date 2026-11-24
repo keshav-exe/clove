@@ -137,7 +137,7 @@ final class SettingsStore {
         didSet { defaults.set(hiddenPortOwners, forKey: Keys.hiddenPortOwners) }
     }
 
-    /// Claude and Codex plan limits in the Now board. Off until asked for,
+    /// Claude, Codex and Cursor plan limits in the Now board. Off until asked for,
     /// since it reads each agent's sign-in and asks its servers.
     var showsUsageLimits: Bool {
         didSet { defaults.set(showsUsageLimits, forKey: Keys.showsUsageLimits) }

@@ -16,7 +16,7 @@ enum NowSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .agents: "Agents at work"
         case .ports: "Servers and ports"
-        case .limits: "Claude and Codex limits"
+        case .limits: "Plan limits"
         case .busy: "Busy apps"
         case .elsewhere: "MCP servers and containers"
         }

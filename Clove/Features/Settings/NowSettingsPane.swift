@@ -57,8 +57,8 @@ struct NowSettingsPane: View {
 
             Section {
                 SettingsToggle(
-                    title: "Claude and Codex limits",
-                    subtitle: "Five-hour and weekly windows, and when they reset",
+                    title: "Plan limits",
+                    subtitle: "Claude and Codex windows, Cursor's month, and when they reset",
                     symbol: "gauge.with.dots.needle.67percent", tint: Palette.Vivid.blue,
                     isOn: $settings.showsUsageLimits
                 )
@@ -70,7 +70,7 @@ struct NowSettingsPane: View {
             } header: {
                 Text("Plan Limits")
             } footer: {
-                Text("Only Anthropic and OpenAI know how much of your plan you've used, so Clove asks them, signed in as you: with the sign-in Claude Code saved in your Keychain, and the one Codex saved in ~/.codex. Clove reads them the same way the agents save them, so there's no password to type. It keeps them in memory only, sends them nowhere but to the agent's own maker, and never refreshes or changes them.")
+                Text("Only Anthropic, OpenAI and Cursor know how much of your plan you've used, so Clove asks them, signed in as you: with the sign-in Claude Code saved in your Keychain, the one Codex saved in ~/.codex, and the one Cursor keeps in its settings. Clove reads them the same way the agents save them, so there's no password to type. It keeps them in memory only, sends them nowhere but to the agent's own maker, and never refreshes or changes them.")
                     .settingsFooter()
             }
         }
@@ -121,7 +121,7 @@ private struct HiddenOwnerRow: View {
 }
 
 private struct LimitStatusRow: View {
-    let agent: AgentSession.Agent
+    let agent: LimitsAgent
     let state: UsageLimitsStore.State?
 
     var body: some View {
@@ -139,7 +139,7 @@ private struct LimitStatusRow: View {
             }
         } label: {
             HStack(spacing: 10) {
-                Image(nsImage: AgentIcons.icon(for: agent))
+                Image(nsImage: agent.icon)
                     .resizable()
                     .frame(width: 22, height: 22)
                 Text([agent.title, state?.limits?.plan].compactMap(\.self).joined(separator: " "))

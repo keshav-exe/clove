@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// How much of each Claude and Codex limit is left, as small meters: the
+/// How much of each Claude, Codex and Cursor limit is left, as small meters: the
 /// five-hour window and the week, side by side.
 struct UsageLimitsCard: View {
     @Environment(AppModel.self) private var model
@@ -43,9 +43,9 @@ struct UsageLimitsCard: View {
                 .frame(width: 26, height: 26)
                 .background(Color.primary.opacity(0.07), in: .circle)
             VStack(alignment: .leading, spacing: 1) {
-                Text("See your Claude and Codex limits")
+                Text("See your plan limits")
                     .font(.system(size: 12.5, weight: .semibold))
-                Text("Uses the sign-ins Claude Code and Codex already saved. No password.")
+                Text("Uses the sign-ins Claude Code, Codex and Cursor already saved. No password.")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -69,12 +69,12 @@ struct UsageLimitsCard: View {
 /// One agent's limits: who, the current window as a full-width bar with its
 /// percent, and a footnote for when it resets and how the week is going.
 private struct AgentLimitsRow: View {
-    let agent: AgentSession.Agent
+    let agent: LimitsAgent
     let state: UsageLimitsStore.State
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(nsImage: AgentIcons.icon(for: agent))
+            Image(nsImage: agent.icon)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 18, height: 18)

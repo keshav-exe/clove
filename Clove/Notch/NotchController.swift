@@ -359,7 +359,26 @@ final class NotchController {
                     if self.notch.phase == .open, !self.notch.isFocused { self.close() }
                 }
             }
-        case .open, .moment:
+        case .moment:
+            // A half-open moment is already in reach: resting on it opens the
+            // rest, the same as a click. One with its own button waits for
+            // the click, so the button isn't whisked away.
+            let buttons = NSEvent.pressedMouseButtons
+            if overIsland, buttons == 0, notch.moment?.action == nil, model.settings.notchOpensOnHover {
+                guard hoverTask == nil else { return }
+                hoverTask = Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(220))
+                    guard let self, !Task.isCancelled else { return }
+                    self.hoverTask = nil
+                    if self.islandRect.contains(NSEvent.mouseLocation), self.notch.phase == .moment, self.notch.moment?.action == nil {
+                        self.open(.now, focused: false)
+                    }
+                }
+            } else {
+                hoverTask?.cancel()
+                hoverTask = nil
+            }
+        case .open:
             break
         }
     }
