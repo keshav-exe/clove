@@ -340,6 +340,29 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.7",
+            title: "What's New in Clove 3.7",
+            subtitle: "A Dynamic Island for displays without a notch.",
+            symbolName: "capsule.fill",
+            features: [
+                FeatureHighlight(
+                    symbolName: "capsule.fill",
+                    title: "Dynamic Island",
+                    detail: "On a display without a notch, Clove floats in the menu bar as a pill, out of sight until an agent is at work."
+                ),
+                FeatureHighlight(
+                    symbolName: "display.2",
+                    title: "On the Display You're Using",
+                    detail: "Settings › General › Show on keeps the island on the built-in display, or on whichever one you're working in."
+                ),
+                FeatureHighlight(
+                    symbolName: "rectangle.topthird.inset.filled",
+                    title: "Slimmer Ears",
+                    detail: "Less room beside the notch while agents work, or none: turn them off in Settings › General."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
