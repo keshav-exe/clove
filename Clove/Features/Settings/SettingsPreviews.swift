@@ -286,3 +286,35 @@ struct AccessModeCard: View {
         .clipShape(.rect(cornerRadius: 8, style: .continuous))
     }
 }
+
+/// One working mark to pick, playing as it would beside the notch.
+struct AgentMarkChoice: View {
+    let mark: AgentMark
+    let isPicked: Bool
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                AgentMarkView(mark: mark)
+                    .environment(\.colorScheme, .dark)
+                    .frame(width: 40, height: 26)
+                    .background(Color(white: 0.07), in: .rect(cornerRadius: 7, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .strokeBorder(isPicked ? Color.accentColor : Color.primary.opacity(isHovered ? 0.25 : 0.1), lineWidth: isPicked ? 2 : 1)
+                    }
+                Text(mark.title)
+                    .font(.caption)
+                    .fontWeight(isPicked ? .semibold : .regular)
+                    .foregroundStyle(isPicked ? .primary : .secondary)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .accessibilityLabel(mark.title)
+        .accessibilityAddTraits(isPicked ? .isSelected : [])
+    }
+}
