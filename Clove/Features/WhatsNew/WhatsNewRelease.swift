@@ -363,6 +363,29 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.8",
+            title: "What's New in Clove 3.8",
+            subtitle: "Pick the mark beside the notch, and open it on hover.",
+            symbolName: "circle.dotted.circle",
+            features: [
+                FeatureHighlight(
+                    symbolName: "circle.dotted.circle",
+                    title: "Working Mark",
+                    detail: "Settings › General › Working mark: the still Dot, or Breathe, Orbit, Bars or Ripple while an agent works."
+                ),
+                FeatureHighlight(
+                    symbolName: "cursorarrow.rays",
+                    title: "Open on Hover",
+                    detail: "When an agent starts or finishes and the notch grows a little, rest the pointer on it to open the rest."
+                ),
+                FeatureHighlight(
+                    symbolName: "leaf",
+                    title: "Lighter in the Background",
+                    detail: "Clove sleeps more between checks, and the pictures in Settings stay still."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
