@@ -22,6 +22,10 @@ final class UsageLimitsStore {
     var onNearlyUsed: (LimitsAgent, UsageWindow) -> Void = { _, _ in }
 
     @ObservationIgnored private var claudeCredentials: ClaudeLimitsClient.Credentials?
+    @ObservationIgnored private var cursorCredentials: CursorLimitsClient.Credentials?
+    /// Cursor's sign-in couldn't be read; not worth opening its database again
+    /// until Clove restarts or limits are turned off and on.
+    @ObservationIgnored private var cursorUnreadable = false
     @ObservationIgnored private var lastCheck: Date?
     @ObservationIgnored private var isChecking = false
     @ObservationIgnored private var warned: Set<String> = []
@@ -31,7 +35,7 @@ final class UsageLimitsStore {
     }
 
     static var anyInstalled: Bool {
-        ClaudeLimitsClient.isInstalled || CodexLimitsClient.isInstalled || CursorLimitsClient.isInstalled
+        ClaudeLimitsClient.isInstalled || CodexLimitsClient.isInstalled
     }
 
     /// Checks unless a check finished less than `maxAge` ago.
@@ -43,7 +47,7 @@ final class UsageLimitsStore {
 
         async let claude: State? = ClaudeLimitsClient.isInstalled ? await checkClaude() : nil
         async let codex: State? = CodexLimitsClient.isInstalled ? Self.state(await CodexLimitsClient.fetch()) : nil
-        async let cursor: State? = CursorLimitsClient.isInstalled ? Self.state(await CursorLimitsClient.fetch()) : nil
+        async let cursor: State? = CursorLimitsClient.isInstalled ? await checkCursor() : nil
         let results: [(LimitsAgent, State?)] = [(.claude, await claude), (.codex, await codex), (.cursor, await cursor)]
 
         for (agent, state) in results {
@@ -73,6 +77,8 @@ final class UsageLimitsStore {
     func reset() {
         states = [:]
         claudeCredentials = nil
+        cursorCredentials = nil
+        cursorUnreadable = false
         lastCheck = nil
     }
 
@@ -87,6 +93,19 @@ final class UsageLimitsStore {
         guard let credentials = claudeCredentials else { return .failed(.denied) }
         let result = await ClaudeLimitsClient.fetch(credentials)
         if case .failure(.expired) = result { claudeCredentials = nil }
+        return Self.state(result)
+    }
+
+    /// Nil hides Cursor: no sign-in Clove can read.
+    private func checkCursor() async -> State? {
+        if cursorCredentials == nil || cursorCredentials?.expiresAt.map({ $0 < .now }) == true {
+            guard !cursorUnreadable else { return nil }
+            cursorCredentials = await CursorLimitsClient.credentials()
+            if cursorCredentials == nil { cursorUnreadable = true; return nil }
+        }
+        guard let credentials = cursorCredentials else { return nil }
+        let result = await CursorLimitsClient.fetch(credentials)
+        if case .failure(.expired) = result { cursorCredentials = nil; cursorUnreadable = false }
         return Self.state(result)
     }
 

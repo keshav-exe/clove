@@ -359,28 +359,22 @@ enum CursorLimitsClient {
         var cookie: String { "WorkosCursorSessionToken=\(userID)%3A%3A\(accessToken)" }
     }
 
+    /// Nil when there's no sign-in Clove can read: signed out, or a newer
+    /// Cursor that keeps it encrypted. Clove won't reach into the Keychain
+    /// for Cursor's key, so then Cursor simply isn't listed.
     @concurrent
-    static func credentials() async -> Result<Credentials, LimitsFailure> {
-        guard let token = SettingsDatabase.value(for: "cursorAuth/accessToken", in: database), !token.isEmpty else {
-            return .failure(.notSignedIn("Sign in to Cursor to see its plan usage."))
-        }
-        guard let claims = jwtClaims(token), let subject = claims["sub"] as? String,
+    static func credentials() async -> Credentials? {
+        guard let token = SettingsDatabase.value(for: "cursorAuth/accessToken", in: database), !token.isEmpty,
+              let claims = jwtClaims(token), let subject = claims["sub"] as? String,
               let userID = subject.split(separator: "|").last.map(String.init), !userID.isEmpty
-        // Newer Cursor builds keep the sign-in encrypted, and Clove won't
-        // reach into the Keychain for Cursor's key.
-        else { return .failure(.notSignedIn("This version of Cursor keeps its sign-in encrypted, so Clove can't read its usage.")) }
+        else { return nil }
         let plan = SettingsDatabase.value(for: "cursorAuth/stripeMembershipType", in: database).map(planName)
         let expires = (claims["exp"] as? Double).map { Date(timeIntervalSince1970: $0) }
-        return .success(Credentials(accessToken: token, userID: userID, plan: plan, expiresAt: expires))
+        return Credentials(accessToken: token, userID: userID, plan: plan, expiresAt: expires)
     }
 
     @concurrent
-    static func fetch() async -> Result<AgentLimits, LimitsFailure> {
-        let credentials: Credentials
-        switch await self.credentials() {
-        case .success(let found): credentials = found
-        case .failure(let failure): return .failure(failure)
-        }
+    static func fetch(_ credentials: Credentials) async -> Result<AgentLimits, LimitsFailure> {
         if let expires = credentials.expiresAt, expires < .now { return .failure(.expired) }
         var request = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!, timeoutInterval: 15)
         request.setValue(credentials.cookie, forHTTPHeaderField: "Cookie")

@@ -188,7 +188,7 @@ private struct PreviewAgentCard: View {
                 .lineLimit(1)
                 Spacer(minLength: 8)
                 HStack(spacing: 5) {
-                    BreathingDot(color: session.glowColors.first ?? Palette.mint)
+                    Circle().fill(session.glowColors.first ?? Palette.mint).frame(width: 6, height: 6)
                     Text("Working")
                 }
                 .font(.system(size: 10.5, weight: .semibold))
@@ -222,7 +222,12 @@ private struct PreviewAgentCard: View {
         .padding(.horizontal, 14)
         .padding(.top, 12)
         .padding(.bottom, showsSteps ? 14 : 12)
-        .notchCard(breathing: session.glowColors)
+        // The glow caught mid-breath: a picture shouldn't redraw every frame.
+        .background {
+            BreathingGlow(colors: session.glowColors, isStill: true)
+                .clipShape(.rect(cornerRadius: 18, style: .continuous))
+        }
+        .notchCard()
     }
 
     private func step(_ symbol: String, _ text: String, isCurrent: Bool) -> some View {
