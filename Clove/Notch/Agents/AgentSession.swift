@@ -69,6 +69,9 @@ struct AgentSession: Identifiable, Equatable, Sendable {
     /// Background commands and subagents it started this task that haven't
     /// reported back. The task isn't done while any are out.
     var backgroundJobs: Set<String> = []
+    /// Its turn has ended with background work still out. The task isn't
+    /// over, but the agent itself is idle until that work reports back.
+    var awaitsBackground = false
     /// Why it stopped, when it stopped on an error rather than finishing.
     var failure: String? = nil
     /// Its last words end in a question: it's waiting on you, not done.
@@ -82,6 +85,9 @@ struct AgentSession: Identifiable, Equatable, Sendable {
     var project: String {
         folder?.lastPathComponent ?? agent.title
     }
+
+    /// Doing something right now: mid-turn, not just waiting on background work.
+    var isActive: Bool { state == .working && !awaitsBackground }
 
     /// The step in flight, if any.
     var currentStep: Step? {
