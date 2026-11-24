@@ -69,6 +69,7 @@ struct NotchView: View {
             let glass = model.settings.notchGlass
             let band = min(0.9, notch.notchSize.height / max(notch.size.height, 1))
             ZStack {
+                IslandShadow(shape: shape, opacity: expanded ? (glass ? 0.32 : 0.4) : 0, radius: 22, y: 10)
                 if glass {
                     Color.clear
                         .glassEffect(.regular, in: shape)
@@ -88,11 +89,12 @@ struct NotchView: View {
                     .fill(.black)
                     .opacity(expanded && glass ? 0 : 1)
             }
-            .shadow(color: .black.opacity(expanded ? (glass ? 0.32 : 0.4) : 0), radius: 22, y: 10)
         } else {
-            Color.clear
-                .glassEffect(.regular, in: shape)
-                .shadow(color: .black.opacity(expanded ? 0.18 : 0), radius: 18, y: 8)
+            ZStack {
+                IslandShadow(shape: shape, opacity: expanded ? 0.18 : 0, radius: 18, y: 8)
+                Color.clear
+                    .glassEffect(.regular, in: shape)
+            }
         }
     }
 
@@ -131,6 +133,29 @@ struct NotchView: View {
             }
             .transition(reduceMotion ? .identity : .contentReveal)
         }
+    }
+}
+
+/// The island's drop shadow, on a layer of its own with the island's inside
+/// cut out. A `.shadow` on the glass itself renders the glass offscreen, and
+/// screen recordings capture that offscreen layer as a solid black box.
+private struct IslandShadow: View {
+    let shape: NotchShape
+    let opacity: Double
+    let radius: CGFloat
+    let y: CGFloat
+
+    var body: some View {
+        shape
+            .fill(.black)
+            .shadow(color: .black.opacity(opacity), radius: radius, y: y)
+            .mask {
+                Rectangle()
+                    .padding(-(radius * 2 + y))
+                    .overlay { shape.blendMode(.destinationOut) }
+                    .compositingGroup()
+            }
+            .allowsHitTesting(false)
     }
 }
 

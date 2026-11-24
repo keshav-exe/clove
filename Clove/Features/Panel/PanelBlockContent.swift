@@ -66,6 +66,8 @@ struct NowTab: View {
         }
         .scrollIndicators(.never)
         .scrollBounceBehavior(.basedOnSize)
+        // A board taller than the island fades out under its edge, not sliced mid-line.
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .task {
             await model.containers.refresh()
         }
