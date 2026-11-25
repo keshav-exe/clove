@@ -55,6 +55,8 @@ enum AgentTranscriptReader {
                         session.state = .interrupted
                     } else if let job = finishedJob(prompt) {
                         session.backgroundJobs.remove(job)
+                        // The report wakes the agent up to read it.
+                        session.awaitsBackground = false
                     } else if !isSystemText(prompt) {
                         startTurn(&session, entry: entry)
                         sawTurn = true
@@ -75,6 +77,7 @@ enum AgentTranscriptReader {
                             session.state = .interrupted
                         } else if let job = finishedJob(text) {
                             session.backgroundJobs.remove(job)
+                            session.awaitsBackground = false
                         } else if !isSystemText(text) {
                             startsTurn = true
                         }
@@ -97,6 +100,7 @@ enum AgentTranscriptReader {
                     continue
                 }
                 session.state = .working
+                session.awaitsBackground = false
                 for block in message["content"] as? [[String: Any]] ?? [] {
                     switch block["type"] as? String {
                     case "tool_use":
@@ -117,6 +121,7 @@ enum AgentTranscriptReader {
                 // The turn ending isn't the task ending while background work is still out.
                 if message["stop_reason"] as? String == "end_turn", session.currentStep == nil {
                     session.state = session.backgroundJobs.isEmpty ? .finished : .working
+                    session.awaitsBackground = !session.backgroundJobs.isEmpty
                 }
             }
         }
@@ -266,6 +271,7 @@ enum AgentTranscriptReader {
         session.failure = nil
         session.asksQuestion = false
         session.backgroundJobs = []
+        session.awaitsBackground = false
         let timestamp = entry["timestamp"] as? String
         session.promptID = entry["uuid"] as? String ?? timestamp
         session.startedAt = timestamp.flatMap { try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse($0) }

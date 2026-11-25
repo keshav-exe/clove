@@ -20,6 +20,19 @@ struct AgentTaskTests {
         let session = try #require(read([prompt, launch, launched, pause]))
         #expect(session.state == .working)
         #expect(session.backgroundJobs == ["toolu_1"])
+        // The agent itself is idle until the work reports back.
+        #expect(session.awaitsBackground)
+        #expect(!session.isActive)
+    }
+
+    @Test func aBackgroundReportWakesTheAgent() throws {
+        let session = try #require(read([prompt, launch, launched, pause, notification]))
+        #expect(session.isActive)
+    }
+
+    @Test func runningABackgroundCommandMidTurnIsActive() throws {
+        let session = try #require(read([prompt, launch, launched]))
+        #expect(session.isActive)
     }
 
     @Test func finishesOnceBackgroundWorkReportsBack() throws {

@@ -88,8 +88,10 @@ final class AgentActivityStore {
     func showPreview(_ sessions: [AgentSession]) { self.sessions = sessions }
     #endif
 
+    /// Agents doing something right now. One whose turn ended with only
+    /// background work out is idle, and isn't counted.
     var working: [AgentSession] {
-        sessions.filter { $0.state == .working }
+        sessions.filter(\.isActive)
     }
 
     func start() {
@@ -238,6 +240,10 @@ final class AgentActivityStore {
         }
     }
 
+    nonisolated static func isRunning(_ pid: Int32) -> Bool {
+        kill(pid, 0) == 0 || errno == EPERM
+    }
+
     nonisolated private static func recentlyWritten(_ path: String, now: Date) -> Bool {
         guard let modified = try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date else { return false }
         return now.timeIntervalSince(modified) < 86_400
@@ -246,6 +252,14 @@ final class AgentActivityStore {
     private func publish() {
         let now = Date.now
         byID = byID.filter { Self.isFresh($0.value, now: now) }
+        // An agent whose process has gone (the window closed, the terminal quit)
+        // won't write the end of its turn: it stopped. Its app is kept, but
+        // looked up afresh if the conversation picks up again.
+        for (path, session) in byID where session.state == .working {
+            guard let host = hosts[path], host.agentPID > 0, !Self.isRunning(host.agentPID) else { continue }
+            byID[path]?.state = .interrupted
+            hosts[path] = AgentHost(bundlePath: host.bundlePath, bundleID: host.bundleID, name: host.name, agentPID: 0)
+        }
         // Remembered apps outlive a session on the board by a day, for when it comes back.
         if hasLoaded {
             let before = hosts.count
