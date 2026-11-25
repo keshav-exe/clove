@@ -48,6 +48,13 @@ struct NotchView: View {
         }
     }
 
+    /// The island's frost thins from the middle of the tint slider towards
+    /// Clear; the cards take it over in step.
+    private var cardFrost: Double {
+        guard model.settings.notchGlass, notch.isHardware || notch.isFloating else { return 0 }
+        return max(0, 1 - model.settings.glassTint * 2)
+    }
+
     /// The glass arrives late and leaves early, so it's only seen still.
     private func glassFade(showing: Bool) -> Animation? {
         if reduceMotion { return nil }
@@ -68,6 +75,7 @@ struct NotchView: View {
             Color.clear
                 .overlay(alignment: .top) {
                     content.padding(.horizontal, notch.shoulderRadius)
+                        .environment(\.notchCardFrost, cardFrost)
                 }
                 .clipShape(shape)
         }
@@ -183,6 +191,13 @@ struct NotchView: View {
                             if tab.fitsContent, tab != .now { notch.measuredHeights[tab] = height }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        // The other tabs aren't made of cards, so over a clear
+                        // island they get one frosted pane to sit on.
+                        .background {
+                            if tab != .now, cardFrost > 0 {
+                                TabFrost(amount: cardFrost)
+                            }
+                        }
                         .id(notch.tab)
                         // Switching tabs is frequent: a quick cross-fade, nothing more.
                         .transition(reduceMotion ? .identity : .opacity.animation(.easeOut(duration: 0.12)))
@@ -191,6 +206,23 @@ struct NotchView: View {
             .frame(width: width, height: target.height, alignment: .top)
             .transition(reduceMotion ? .identity : .contentReveal)
         }
+    }
+}
+
+/// A frosted pane behind a whole tab, as much as the cards would carry.
+private struct TabFrost: View {
+    let amount: Double
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        ZStack {
+            Color.clear
+                .glassEffect(.regular, in: shape)
+                .opacity(amount)
+            shape.fill(.black.opacity(0.22 * amount))
+        }
+        .padding([.horizontal, .bottom], 6)
+        .allowsHitTesting(false)
     }
 }
 

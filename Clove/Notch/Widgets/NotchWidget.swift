@@ -9,12 +9,22 @@ struct NotchGlass: ViewModifier {
     /// Colours to breathe along the bottom edge while something runs.
     var breathing: [Color]?
     var isHovered = false
+    @Environment(\.notchCardFrost) private var cardFrost
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         content
             .background {
                 ZStack {
+                    // As the island clears, each card frosts over instead, the
+                    // way Control Center's tiles do, so its text stays readable
+                    // over whatever's behind.
+                    if cardFrost > 0 {
+                        Color.clear
+                            .glassEffect(.regular, in: shape)
+                            .opacity(cardFrost)
+                        shape.fill(.black.opacity(0.22 * cardFrost))
+                    }
                     shape.fill(Color.primary.opacity(isHovered ? 0.075 : 0.05))
                     if let breathing, !breathing.isEmpty {
                         BreathingGlow(colors: breathing)
@@ -28,6 +38,12 @@ struct NotchGlass: ViewModifier {
             }
             .animation(.easeOut(duration: 0.15), value: isHovered)
     }
+}
+
+extension EnvironmentValues {
+    /// How much frost the cards carry themselves: none while the island is
+    /// frosted, all of it once the island is clear.
+    @Entry var notchCardFrost: Double = 0
 }
 
 extension View {
