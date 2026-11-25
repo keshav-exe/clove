@@ -20,12 +20,12 @@ struct PrivacyPromise: Identifiable, Hashable {
         PrivacyPromise(
             symbolName: "externaldrive.badge.checkmark",
             title: "Your groups stay local",
-            detail: "Saved in one JSON file inside Clove's Application Support folder."
+            detail: "Saved in one file on this Mac."
         ),
         PrivacyPromise(
             symbolName: "wifi.slash",
             title: "No analytics",
-            detail: "Discover talks to skills.sh and GitHub only while you browse or install. Plan limits, once you turn them on, ask Anthropic and OpenAI. No telemetry, no skill uploads."
+            detail: "Discover only talks to skills.sh and GitHub while you browse or install. If you turn on plan limits, Clove asks Anthropic, OpenAI and Cursor how much you've used. Nothing else leaves your Mac."
         ),
     ]
 }

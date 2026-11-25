@@ -19,11 +19,11 @@ extension NowSection {
     /// What the section shows, for its row in Settings.
     var detail: String {
         switch self {
-        case .agents: "Each conversation at work, its steps, and the file it's changing"
-        case .ports: "Dev servers, and the apps holding ports"
+        case .agents: "What each agent is doing, step by step, and which file it's changing"
+        case .ports: "Running dev servers and the apps using ports"
         case .limits: "How much of your Claude, Codex and Cursor plans you've used"
-        case .busy: "Apps using more than half a core"
-        case .elsewhere: "A count of MCP servers and containers"
+        case .busy: "Apps using a lot of CPU right now"
+        case .elsewhere: "How many MCP servers and containers are running"
         }
     }
 }

@@ -92,9 +92,9 @@ struct NotchView: View {
                     Color.clear
                         .glassEffect(.regular, in: shape)
                     // The tint under the glass: black where it meets the notch,
-                    // thinning below it as far as the clarity setting asks.
-                    let clarity = model.settings.notchGlassClarity
-                    let tint = { (frosted: Double, clear: Double) in frosted + (clear - frosted) * clarity }
+                    // thinning below it as far as the tint setting allows.
+                    let amount = model.settings.glassTint
+                    let tint = { (frosted: Double, clear: Double) in clear + (frosted - clear) * amount }
                     let top = notch.isFloating ? tint(0.7, 0.22) : 1
                     shape.fill(LinearGradient(
                         stops: [

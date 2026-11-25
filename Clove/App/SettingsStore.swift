@@ -77,14 +77,29 @@ final class SettingsStore {
         didSet { defaults.set(notchGlass, forKey: Keys.notchGlass) }
     }
 
-    /// How much of what's behind the open island shows through its glass:
-    /// 0 is frosted and dark, 1 is as clear as glass gets and stays readable.
-    var notchGlassClarity: Double {
-        didSet { defaults.set(notchGlassClarity, forKey: Keys.notchGlassClarity) }
+    /// The open island's glass follows the Clear/Tinted slider in the
+    /// system's Appearance settings.
+    var notchGlassFollowsSystem: Bool {
+        didSet { defaults.set(notchGlassFollowsSystem, forKey: Keys.notchGlassFollowsSystem) }
     }
 
-    /// Midway: close to the system's own glass, still dark enough to read over a busy wallpaper.
-    static let defaultGlassClarity = 0.5
+    /// The island's own tint when it doesn't follow the system: 0 is clear,
+    /// 1 is tinted, the same way round as the system's slider.
+    var notchGlassTint: Double {
+        didSet { defaults.set(notchGlassTint, forKey: Keys.notchGlassTint) }
+    }
+
+    /// The tint the island uses right now. The system's value is read when the
+    /// island draws, so changing it in Appearance shows the next time it opens.
+    var glassTint: Double {
+        guard notchGlassFollowsSystem else { return notchGlassTint }
+        // The app's standard defaults search the global domain, where the system keeps it.
+        let system = UserDefaults.standard.object(forKey: "NSGlassTintAmount") as? Double
+        return min(max(system ?? 0, 0), 1)
+    }
+
+    /// Midway, for when you first stop following the system.
+    static let defaultGlassTint = 0.5
 
     /// The notch grows for a moment when an agent finishes a turn.
     var notchAgentMoments: Bool {
@@ -223,7 +238,8 @@ final class SettingsStore {
         accessMode = defaults.string(forKey: Keys.accessMode).flatMap(AccessMode.init(rawValue:)) ?? .notch
         menuBarStat = defaults.string(forKey: Keys.menuBarStat).flatMap(MenuBarStat.init(rawValue:)) ?? .none
         notchGlass = defaults.flag(Keys.notchGlass, default: true)
-        notchGlassClarity = (defaults.object(forKey: Keys.notchGlassClarity) as? Double).map { min(max($0, 0), 1) } ?? Self.defaultGlassClarity
+        notchGlassFollowsSystem = defaults.flag(Keys.notchGlassFollowsSystem, default: true)
+        notchGlassTint = (defaults.object(forKey: Keys.notchGlassTint) as? Double).map { min(max($0, 0), 1) } ?? Self.defaultGlassTint
         notchAgentMoments = defaults.flag(Keys.notchAgentMoments, default: true)
         notchAgentStartMoments = defaults.flag(Keys.notchAgentStartMoments, default: true)
         notchShowsAgents = defaults.flag(Keys.notchShowsAgents, default: true)
@@ -327,7 +343,8 @@ final class SettingsStore {
         static let menuBarStat = "menuBarStat"
         static let offeredNowBlock = "offeredNowBlock"
         static let notchGlass = "notchGlass"
-        static let notchGlassClarity = "notchGlassClarity"
+        static let notchGlassFollowsSystem = "notchGlassFollowsSystem"
+        static let notchGlassTint = "notchGlassTint"
         static let notchAgentMoments = "notchAgentMoments"
         static let notchAgentStartMoments = "notchAgentStartMoments"
         static let notchShowsAgents = "notchShowsAgents"

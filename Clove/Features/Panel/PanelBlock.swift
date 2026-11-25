@@ -36,10 +36,10 @@ enum PanelBlock: String, CaseIterable, Identifiable, Sendable {
 
     var detail: String {
         switch self {
-        case .now: "Agents at work, servers up, and what's busy"
+        case .now: "Working agents, running servers and open ports"
         case .skills: "Search, copy, and insert skills"
-        case .storage: "The disk, live, and what to clear"
-        case .trending: "What's climbing on skills.sh"
+        case .storage: "How full your disk is and what you can clear"
+        case .trending: "Popular skills on skills.sh this week"
         }
     }
 

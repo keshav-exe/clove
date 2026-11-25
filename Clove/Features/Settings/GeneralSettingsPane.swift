@@ -28,7 +28,7 @@ struct GeneralSettingsPane: View {
                 if isNotch, !rivals.isEmpty {
                     SettingsRow(
                         title: "\(NotchNeighbors.list(rivals)) also \(rivals.count == 1 ? "uses" : "use") the notch",
-                        subtitle: "If both show up there, pick Menu Bar.",
+                        subtitle: "You might see both at once. Choose Menu Bar to stay out of the way.",
                         symbol: "rectangle.on.rectangle", tint: Palette.Vivid.yellow
                     ) { EmptyView() }
                 }
@@ -36,8 +36,8 @@ struct GeneralSettingsPane: View {
                 Text("Where Clove Lives")
             } footer: {
                 Text(isNotch
-                    ? "Hover the notch to peek; click it or press the shortcut to search. Right-click it for every section. On a display without a notch, Clove is a Dynamic Island in the menu bar: out of sight until something's live, and a hover away."
-                    : "Click the icon or press the shortcut for the panel; right-click it for every section. Moments and agents at work need the notch.")
+                    ? "Hover the notch to see what's going on. Click it or press your shortcut to search, and right-click it for everything else. On screens without a notch, Clove sits in the menu bar as a small island that appears when something's happening."
+                    : "Click the icon or press your shortcut to open Clove, and right-click it for everything else. Updates from your agents only show in the notch.")
                     .settingsFooter()
             }
 
@@ -51,14 +51,14 @@ struct GeneralSettingsPane: View {
                         } label: {
                             SettingsLabel(
                                 title: "Show on",
-                                subtitle: "Displays without a notch get a Dynamic Island in the menu bar",
+                                subtitle: "Screens without a notch show it in the menu bar",
                                 symbol: "display.2", tint: Palette.Vivid.blue
                             )
                         }
                     }
-                    SettingsToggle(title: "Agents at work beside the notch", subtitle: "Their app's icon and a mark, or a floating pill saying what they're on", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchShowsAgents)
+                    SettingsToggle(title: "Show working agents", subtitle: "Their app's icon sits beside the notch while they work", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchShowsAgents)
                     if settings.notchShowsAgents {
-                        SettingsRow(title: "Working mark", subtitle: "Beside the notch while one agent works", symbol: "waveform", tint: Palette.Vivid.green) {
+                        SettingsRow(title: "Working indicator", subtitle: "Next to the notch while an agent works", symbol: "waveform", tint: Palette.Vivid.green) {
                             HStack(spacing: 6) {
                                 ForEach(AgentMark.allCases) { mark in
                                     AgentMarkChoice(mark: mark, isPicked: settings.agentMark == mark) {
@@ -68,32 +68,37 @@ struct GeneralSettingsPane: View {
                             }
                         }
                     }
-                    SettingsToggle(title: "Open on hover", subtitle: "Peek without clicking; it closes when you move away", symbol: "cursorarrow.rays", tint: Palette.Vivid.blue, isOn: $settings.notchOpensOnHover)
-                    SettingsToggle(title: "Liquid Glass when open", subtitle: "Glass below the notch instead of solid black", symbol: "circle.lefthalf.filled", tint: Palette.Vivid.cyan, isOn: $settings.notchGlass)
+                    SettingsToggle(title: "Open on hover", subtitle: "Opens when your pointer reaches it and closes when you move away", symbol: "cursorarrow.rays", tint: Palette.Vivid.blue, isOn: $settings.notchOpensOnHover)
+                    SettingsToggle(title: "Liquid Glass", subtitle: "See your desktop through the open notch. Off, it's solid black.", symbol: "circle.lefthalf.filled", tint: Palette.Vivid.cyan, isOn: $settings.notchGlass)
                     if settings.notchGlass {
-                        SettingsRow(title: "Glass", subtitle: "From frosted to clear, like the system's own", symbol: "drop.halffull", tint: Palette.Vivid.cyan) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "square.fill.on.square.fill")
-                                    .help("Frosted")
-                                Slider(value: $settings.notchGlassClarity, in: 0...1)
-                                    .frame(width: 160)
-                                    .accessibilityLabel("Glass clarity")
-                                Image(systemName: "square.on.square")
-                                    .help("Clear")
+                        SettingsToggle(title: "Match macOS", subtitle: "Uses Clear or Tinted from Appearance settings", symbol: "apple.logo", tint: Color(white: 0.45), isOn: $settings.notchGlassFollowsSystem)
+                        if !settings.notchGlassFollowsSystem {
+                            SettingsRow(title: "Tint", symbol: "drop.halffull", tint: Palette.Vivid.cyan) {
+                                // Laid out like the slider in Appearance settings: clear on the left, tinted on the right.
+                                HStack(spacing: 8) {
+                                    Image(systemName: "square.on.square")
+                                        .help("Clear")
+                                    Slider(value: $settings.notchGlassTint, in: 0...1)
+                                        .frame(width: 160)
+                                        .accessibilityLabel("Glass tint")
+                                        .accessibilityValue(settings.notchGlassTint < 0.5 ? "Clearer" : "More tinted")
+                                    Image(systemName: "square.fill.on.square.fill")
+                                        .help("Tinted")
+                                }
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
                             }
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
                         }
                     }
                     SettingsToggle(title: "Stay open when clicking elsewhere", symbol: "pin.fill", tint: Palette.Vivid.orange, isOn: $settings.keepPanelOnTop)
                 }
 
-                Section("Grow the Notch When") {
-                    SettingsToggle(title: "An agent starts a task", subtitle: "Opens a little, glowing in the app's colours, then tucks away", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchAgentStartMoments)
-                    SettingsToggle(title: "An agent finishes its task", subtitle: "Or has a question, or stops on an error", symbol: "checkmark", tint: Palette.Vivid.green, isOn: $settings.notchAgentMoments)
+                Section("Expand the Notch When") {
+                    SettingsToggle(title: "An agent starts a task", subtitle: "Shows what it's working on for a few seconds", symbol: "sparkles", tint: Palette.Vivid.violet, isOn: $settings.notchAgentStartMoments)
+                    SettingsToggle(title: "An agent finishes or needs you", subtitle: "Including questions and errors", symbol: "checkmark", tint: Palette.Vivid.green, isOn: $settings.notchAgentMoments)
                     SettingsToggle(title: "A dev server starts or stops", symbol: "globe", tint: Palette.Vivid.blue, isOn: $settings.notchServerMoments)
                     SettingsToggle(title: "The disk is nearly full", symbol: "internaldrive.fill", tint: Palette.Vivid.orange, isOn: $settings.notchStorageMoments)
-                    SettingsToggle(title: "A plan limit is nearly used up", subtitle: settings.showsUsageLimits ? nil : "Turn on plan limits in Now first", symbol: "gauge.with.dots.needle.100percent", tint: Palette.Vivid.red, isOn: $settings.notchLimitMoments)
+                    SettingsToggle(title: "A plan limit is nearly used up", subtitle: settings.showsUsageLimits ? nil : "Turn on Plan limits in Now settings first", symbol: "gauge.with.dots.needle.100percent", tint: Palette.Vivid.red, isOn: $settings.notchLimitMoments)
                         .disabled(!settings.showsUsageLimits)
                 }
             } else {
@@ -103,7 +108,7 @@ struct GeneralSettingsPane: View {
                             Text(stat.title).tag(stat)
                         }
                     } label: {
-                        SettingsLabel(title: "Beside the icon", subtitle: "A number worth a glance", symbol: "number", tint: Palette.Vivid.blue)
+                        SettingsLabel(title: "Next to the icon", subtitle: "A number you can check at a glance", symbol: "number", tint: Palette.Vivid.blue)
                     }
                     SettingsToggle(title: "Stay open when clicking elsewhere", symbol: "pin.fill", tint: Palette.Vivid.orange, isOn: $settings.keepPanelOnTop)
                 }
@@ -124,14 +129,14 @@ struct GeneralSettingsPane: View {
             } header: {
                 Text("Tabs")
             } footer: {
-                Text("Up to four sit beside the notch. Drag to reorder; ⌘1 to ⌘4 follow the order.")
+                Text("Choose up to four. Drag to reorder them. ⌘1 to ⌘4 switch tabs in this order.")
                     .settingsFooter()
             }
 
             Section {
                 SettingsToggle(title: "Launch at login", symbol: "power", tint: Palette.Vivid.green, isOn: $launch.isEnabled)
                 SettingsToggle(title: "Keep running when the window is closed", subtitle: "Clove stays in the \(isNotch ? "notch" : "menu bar")", symbol: "rectangle.on.rectangle", tint: Palette.Vivid.violet, isOn: $settings.keepRunningInMenuBar)
-                SettingsToggle(title: "Hide Dock icon", subtitle: "Only while Clove's window is closed, so Settings stays reachable", symbol: "dock.rectangle", tint: Color(white: 0.45), isOn: $settings.hideDockIcon)
+                SettingsToggle(title: "Hide Dock icon", subtitle: "Only while the Clove window is closed", symbol: "dock.rectangle", tint: Color(white: 0.45), isOn: $settings.hideDockIcon)
             } header: {
                 Text("Startup")
             }
@@ -139,12 +144,12 @@ struct GeneralSettingsPane: View {
             Section {
                 SettingsToggle(
                     title: "Move caches to the Trash first",
-                    subtitle: "So Storage can put them back until you empty it",
+                    subtitle: "You can restore them until you empty the Trash",
                     symbol: "trash.fill", tint: Color(white: 0.45),
                     isOn: Binding { model.storage.trashFirst } set: { model.storage.trashFirst = $0 }
                 )
                 if !model.storage.kept.isEmpty {
-                    SettingsRow(title: "Always kept", subtitle: "Never cleared or suggested", symbol: "lock.fill", tint: Palette.Vivid.blue) {
+                    SettingsRow(title: "Always kept", subtitle: "Clove won't suggest clearing these", symbol: "lock.fill", tint: Palette.Vivid.blue) {
                         Text("\(model.storage.kept.count) folder\(model.storage.kept.count == 1 ? "" : "s")")
                             .foregroundStyle(.secondary)
                     }

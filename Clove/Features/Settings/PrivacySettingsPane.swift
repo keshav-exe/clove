@@ -9,7 +9,7 @@ struct PrivacySettingsPane: View {
     var body: some View {
         SettingsPage {
             Section {
-                SettingsRow(title: "Accessibility", subtitle: "Lets Clove type a skill into the app you were in", symbol: "accessibility", tint: Palette.Vivid.blue) {
+                SettingsRow(title: "Accessibility", subtitle: "Lets Clove paste a skill into the app you were using", symbol: "accessibility", tint: Palette.Vivid.blue) {
                     if accessibility {
                         StatusBadge(text: "Allowed")
                     } else {
@@ -19,7 +19,7 @@ struct PrivacySettingsPane: View {
             } header: {
                 Text("Permissions")
             } footer: {
-                Text("Everything else Clove does works without it: copying a skill always does.")
+                Text("Without it, Clove copies the skill and you paste it yourself. Everything else works the same.")
                     .settingsFooter()
             }
 
@@ -31,7 +31,7 @@ struct PrivacySettingsPane: View {
             }
 
             Section {
-                SettingsRow(title: "Your groups", subtitle: "One JSON file in Clove's Application Support folder", symbol: "doc.fill", tint: Color(white: 0.45)) {
+                SettingsRow(title: "Your groups", subtitle: "Saved in one file on this Mac", symbol: "doc.fill", tint: Color(white: 0.45)) {
                     Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([model.tagsFileURL]) }
                 }
                 SettingsRow(title: "Delete all groups", subtitle: "Your SKILL.md files stay as they are", symbol: "trash.fill", tint: Palette.Vivid.red) {

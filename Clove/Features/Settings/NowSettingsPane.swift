@@ -22,26 +22,26 @@ struct NowSettingsPane: View {
             } header: {
                 Text("Sections")
             } footer: {
-                Text("Drag to reorder. A section shows only when it has something in it; right-click one in the notch to move or hide it there.")
+                Text("Drag to reorder. Empty sections stay hidden. You can also right-click a section in the notch to move or hide it.")
                     .settingsFooter()
             }
 
             Section {
                 SettingsToggle(
                     title: "Dev servers",
-                    subtitle: "Node, Vite, Rails, Postgres, and anything an agent starts",
+                    subtitle: "Node, Vite, Rails, Postgres and anything your agents start",
                     symbol: "globe", tint: Palette.Vivid.green,
                     isOn: $settings.nowShowsDevServers
                 )
                 SettingsToggle(
                     title: "Ports apps keep open",
-                    subtitle: "Raycast on :7265, Figma, Docker, and the like",
+                    subtitle: "Like Raycast, Figma and Docker",
                     symbol: "app.connected.to.app.below.fill", tint: Palette.Vivid.blue,
                     isOn: $settings.nowShowsAppPorts
                 )
                 SettingsToggle(
                     title: "Ports macOS keeps open",
-                    subtitle: "AirPlay Receiver on :5000 and :7000, Continuity",
+                    subtitle: "Like AirPlay Receiver and Continuity",
                     symbol: "apple.logo", tint: Color(white: 0.45),
                     isOn: $settings.nowShowsSystemPorts
                 )
@@ -51,14 +51,14 @@ struct NowSettingsPane: View {
             } header: {
                 Text("Ports")
             } footer: {
-                Text("Activity always lists every port. Hover one in the notch and click Hide to keep an app's ports out of Now.")
+                Text("Activity always lists every port. To hide an app's ports here, hover one in the notch and click Hide.")
                     .settingsFooter()
             }
 
             Section {
                 SettingsToggle(
                     title: "Plan limits",
-                    subtitle: "Claude and Codex windows, Cursor's month, and when they reset",
+                    subtitle: "How much of your Claude, Codex and Cursor plans you've used, and when it resets",
                     symbol: "gauge.with.dots.needle.67percent", tint: Palette.Vivid.blue,
                     isOn: $settings.showsUsageLimits
                 )
@@ -70,7 +70,7 @@ struct NowSettingsPane: View {
             } header: {
                 Text("Plan Limits")
             } footer: {
-                Text("Only Anthropic, OpenAI and Cursor know how much of your plan you've used, so Clove asks them, signed in as you: with the sign-in Claude Code saved in your Keychain, the one Codex saved in ~/.codex, and the one Cursor keeps in its settings. Clove reads them the same way the agents save them, so there's no password to type. It keeps them in memory only, sends them nowhere but to the agent's own maker, and never refreshes or changes them.")
+                Text("Only Anthropic, OpenAI and Cursor know how much you've used, so Clove asks them with the sign-ins your agents already saved. You never type a password. Clove keeps those sign-ins in memory, sends each one only to the company it came from, and never changes them.")
                     .settingsFooter()
             }
         }

@@ -4,18 +4,24 @@ import Testing
 
 @MainActor
 struct NotchGlassTests {
-    @Test func clarityStartsMidwaySticksAndStaysInRange() {
+    @Test func glassFollowsMacOSUntilYouPickATint() {
         let name = "clove.notch-glass.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
 
         let settings = SettingsStore(defaults: defaults)
-        #expect(settings.notchGlassClarity == SettingsStore.defaultGlassClarity)
+        #expect(settings.notchGlassFollowsSystem)
+        #expect((0...1).contains(settings.glassTint))
 
-        settings.notchGlassClarity = 0.8
-        #expect(SettingsStore(defaults: defaults).notchGlassClarity == 0.8)
+        settings.notchGlassFollowsSystem = false
+        #expect(settings.glassTint == SettingsStore.defaultGlassTint)
 
-        defaults.set(3.0, forKey: "notchGlassClarity")
-        #expect(SettingsStore(defaults: defaults).notchGlassClarity == 1)
+        settings.notchGlassTint = 0.8
+        let reopened = SettingsStore(defaults: defaults)
+        #expect(!reopened.notchGlassFollowsSystem)
+        #expect(reopened.glassTint == 0.8)
+
+        defaults.set(3.0, forKey: "notchGlassTint")
+        #expect(SettingsStore(defaults: defaults).notchGlassTint == 1)
     }
 }
