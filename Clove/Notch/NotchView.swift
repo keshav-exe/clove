@@ -91,17 +91,19 @@ struct NotchView: View {
                 if glass {
                     Color.clear
                         .glassEffect(.regular, in: shape)
-                    // The tint under the glass: black where it meets the notch,
-                    // thinning below it as far as the tint setting allows.
+                    // The tint over the glass. Tinted, it's a deep gradient: solid
+                    // black from the notch, thinning to glass at the bottom. Clear,
+                    // it's all glass, with black only where it hides the camera.
                     let amount = model.settings.glassTint
-                    let tint = { (frosted: Double, clear: Double) in clear + (frosted - clear) * amount }
-                    let top = notch.isFloating ? tint(0.7, 0.22) : 1
+                    let tint = { (tinted: Double, clear: Double) in clear + (tinted - clear) * amount }
+                    let top = notch.isFloating ? tint(0.92, 0) : 1
                     shape.fill(LinearGradient(
                         stops: [
                             .init(color: .black.opacity(top), location: 0),
                             .init(color: .black.opacity(top), location: band),
-                            .init(color: .black.opacity(tint(0.66, 0.2)), location: min(1, band + 0.16)),
-                            .init(color: .black.opacity(tint(0.5, 0.08)), location: 1),
+                            .init(color: .black.opacity(tint(0.9, 0)), location: min(1, band + tint(0.2, 0.1))),
+                            .init(color: .black.opacity(tint(0.72, 0)), location: 0.6),
+                            .init(color: .black.opacity(tint(0.45, 0)), location: 1),
                         ],
                         startPoint: .top,
                         endPoint: .bottom

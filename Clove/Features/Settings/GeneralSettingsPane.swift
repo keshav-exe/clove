@@ -78,8 +78,16 @@ struct GeneralSettingsPane: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "square.on.square")
                                         .help("Clear")
-                                    Slider(value: $settings.notchGlassTint, in: 0...1)
+                                    Slider(value: settings.snappedGlassTint, in: 0...1)
                                         .frame(width: 160)
+                                        // A tick under the middle, where the slider settles.
+                                        .overlay(alignment: .bottom) {
+                                            Circle()
+                                                .fill(.tertiary)
+                                                .frame(width: 3, height: 3)
+                                                .offset(y: 6)
+                                                .allowsHitTesting(false)
+                                        }
                                         .accessibilityLabel("Glass tint")
                                         .accessibilityValue(settings.notchGlassTint < 0.5 ? "Clearer" : "More tinted")
                                     Image(systemName: "square.fill.on.square.fill")
@@ -160,6 +168,22 @@ struct GeneralSettingsPane: View {
         }
         .task {
             rivals = await Task.detached { NotchNeighbors.rivals() }.value
+        }
+    }
+}
+
+private extension SettingsStore {
+    /// The tint slider settles on the middle when it passes close by, with a tap you can feel.
+    var snappedGlassTint: Binding<Double> {
+        Binding {
+            self.notchGlassTint
+        } set: { value in
+            let middle = SettingsStore.defaultGlassTint
+            let snapped = abs(value - middle) < 0.06 ? middle : value
+            if snapped == middle, self.notchGlassTint != middle {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            }
+            self.notchGlassTint = snapped
         }
     }
 }
