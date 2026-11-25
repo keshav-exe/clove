@@ -89,8 +89,22 @@ struct NotchView: View {
             ZStack {
                 IslandShadow(shape: shape, opacity: expanded ? (glass ? 0.32 : 0.4) : 0, radius: 22, y: 10)
                 if glass {
+                    // Past the middle towards Clear, the frost itself fades out,
+                    // down to a bare pane with only a lit rim; the system's own
+                    // glass always frosts a surface this big. From the middle
+                    // up it's the regular, frosted glass.
+                    let frost = model.settings.glassTint
                     Color.clear
-                        .glassEffect(.regular, in: shape)
+                        .glassEffect(frost < 0.5 ? .clear : .regular, in: shape)
+                        .opacity(min(1, frost * 2))
+                    shape
+                        // Stroked twice as wide and clipped, so the rim sits just inside the edge.
+                        .stroke(
+                            LinearGradient(colors: [.white.opacity(0.32), .white.opacity(0.08), .white.opacity(0.18)], startPoint: .top, endPoint: .bottom),
+                            lineWidth: 2
+                        )
+                        .clipShape(shape)
+                        .opacity(max(0, 1 - frost * 2))
                     // The tint over the glass. Tinted, it's a deep gradient: solid
                     // black from the notch, thinning to glass at the bottom. Clear,
                     // it's all glass, with black only where it hides the camera.
