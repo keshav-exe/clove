@@ -386,6 +386,29 @@ enum WhatsNewCatalog {
                 ),
             ]
         ),
+        WhatsNewRelease(
+            version: "3.9",
+            title: "What's New in Clove 3.9",
+            subtitle: "A smoother notch, and glass you can tune.",
+            symbolName: "drop.halffull",
+            features: [
+                FeatureHighlight(
+                    symbolName: "rectangle.expand.vertical",
+                    title: "Smoother Opening",
+                    detail: "The notch grows as one clean shape, and what's inside fades in where it belongs instead of sliding in."
+                ),
+                FeatureHighlight(
+                    symbolName: "drop.halffull",
+                    title: "Clear to Tinted",
+                    detail: "Settings › General › Liquid Glass follows your Mac's Clear or Tinted look, or pick your own spot on the slider."
+                ),
+                FeatureHighlight(
+                    symbolName: "text.bubble",
+                    title: "Clearer Settings",
+                    detail: "Settings now say what each option does for you, in plain words."
+                ),
+            ]
+        ),
     ]
 
     static var latest: WhatsNewRelease? {
