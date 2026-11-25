@@ -97,16 +97,16 @@ struct NotchView: View {
             ZStack {
                 IslandShadow(shape: shape, opacity: expanded ? (glass ? 0.32 : 0.4) : 0, radius: 22, y: 10)
                 if glass {
-                    // Past the middle towards Clear, the frost itself fades out,
-                    // down to a bare pane with only a lit rim; the system's own
-                    // glass always frosts a surface this big. From the middle
-                    // up it's the regular, frosted glass.
+                    // Past the middle towards Clear, the frost thins and a lit
+                    // rim takes over the edge, so it still reads as a pane of
+                    // glass. From the middle up the frost is full.
                     let frost = model.settings.glassTint
                     Color.clear
-                        .glassEffect(frost < 0.5 ? .clear : .regular, in: shape)
+                        .glassEffect(.regular, in: shape)
                         // Never quite gone: a little frost stays even at Clear, so
                         // what's behind softens instead of competing with the board.
-                        .opacity(0.5 + 0.5 * min(1, frost * 2))
+                        // A moment has no cards of its own, so it keeps all of it.
+                        .opacity(notch.phase == .moment ? 1 : 0.72 + 0.28 * min(1, frost * 2))
                     shape
                         // Stroked twice as wide and clipped, so the rim sits just inside the edge.
                         .stroke(
@@ -125,9 +125,9 @@ struct NotchView: View {
                         stops: [
                             .init(color: .black.opacity(top), location: 0),
                             .init(color: .black.opacity(top), location: band),
-                            .init(color: .black.opacity(tint(0.9, 0.14)), location: min(1, band + tint(0.2, 0.1))),
-                            .init(color: .black.opacity(tint(0.72, 0.1)), location: 0.6),
-                            .init(color: .black.opacity(tint(0.45, 0.08)), location: 1),
+                            .init(color: .black.opacity(tint(0.9, 0.2)), location: min(1, band + tint(0.2, 0.1))),
+                            .init(color: .black.opacity(tint(0.72, 0.16)), location: 0.6),
+                            .init(color: .black.opacity(tint(0.45, 0.14)), location: 1),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
